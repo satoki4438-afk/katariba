@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 
 const ADMIN_EMAILS = ["tas.studio2026@gmail.com", "satoki4438@gmail.com"];
+const GENRES = ["SF","恋愛","ミステリー","ファンタジー","ラノベ","歴史","エッセイ","ホラー","純文学","ノンフィクション","その他"];
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -20,12 +21,14 @@ export default function AdminPage() {
   const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [schedulerResult, setSchedulerResult] = useState("");
 
-  const GENRES = ["SF","恋愛","ミステリー","ファンタジー","ラノベ","歴史","エッセイ","ホラー","純文学","ノンフィクション","その他"];
   const [newBook, setNewBook] = useState({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "" });
   const [addingBook, setAddingBook] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const searchTimer = useRef(null);
+
+  const [editingBook, setEditingBook] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     if (user === null) { router.push("/login"); return; }
@@ -48,10 +51,10 @@ export default function AdminPage() {
     setSearchResults([]);
     clearTimeout(searchTimer.current);
     if (val.trim().length < 2) return;
-    searchTimer.current = setTimeout(() => searchRakuten(val.trim()), 600);
+    searchTimer.current = setTimeout(() => searchBooks(val.trim()), 600);
   }
 
-  async function searchRakuten(title) {
+  async function searchBooks(title) {
     setSearching(true);
     try {
       const res = await fetch(`/api/rakuten?title=${encodeURIComponent(title)}`);
@@ -95,6 +98,35 @@ export default function AdminPage() {
     fetchBooks();
   }
 
+  function handleStartEdit(book) {
+    if (editingBook?.id === book.id) { setEditingBook(null); return; }
+    setEditingBook({
+      id: book.id,
+      title: book.title || "",
+      author: book.author || "",
+      description: book.description || "",
+      coverUrl: book.coverUrl || "",
+      rakutenUrl: book.rakutenUrl || "",
+      genre: book.genre || "",
+    });
+  }
+
+  async function handleSaveEdit() {
+    if (!editingBook) return;
+    setSavingEdit(true);
+    await updateDoc(doc(db, "books", editingBook.id), {
+      title: editingBook.title.trim(),
+      author: editingBook.author.trim(),
+      description: editingBook.description.trim() || null,
+      coverUrl: editingBook.coverUrl.trim() || null,
+      rakutenUrl: editingBook.rakutenUrl.trim() || null,
+      genre: editingBook.genre || null,
+    });
+    setSavingEdit(false);
+    setEditingBook(null);
+    fetchBooks();
+  }
+
   async function fetchComments(bookId) {
     setSelectedBookId(bookId);
     const snap = await getDocs(
@@ -134,6 +166,7 @@ export default function AdminPage() {
     if (!window.confirm(`「${title}」を削除しますか？`)) return;
     await deleteDoc(doc(db, "books", bookId));
     if (selectedBookId === bookId) { setSelectedBookId(""); setFeaturedCandidates([]); }
+    if (editingBook?.id === bookId) setEditingBook(null);
     fetchBooks();
   }
 
@@ -163,28 +196,20 @@ export default function AdminPage() {
         .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
         @media(max-width:600px){ .form-row { grid-template-columns:1fr; } }
         .form-field { position:relative; }
-        .form-input { width:100%; border:1px solid var(--line); padding:11px 14px; font-size:13px; font-family:'Noto Sans JP',sans-serif; color:var(--text); background:white; outline:none; }
+        .form-input { width:100%; border:1px solid var(--line); padding:11px 14px; font-size:13px; font-family:'Noto Sans JP',sans-serif; color:var(--text); background:white; outline:none; box-sizing:border-box; }
         .form-input:focus { border-color:var(--text); }
         .form-label { font-size:10px; letter-spacing:2px; color:var(--muted); display:block; margin-bottom:6px; }
         .form-hint { font-size:11px; color:var(--muted); margin-top:4px; }
 
-        .search-results {
-          position:absolute; top:100%; left:0; right:0; z-index:10;
-          background:white; border:1px solid var(--text); border-top:none;
-          max-height:280px; overflow-y:auto;
-        }
-        .search-item {
-          display:flex; gap:12px; align-items:center; padding:12px 14px;
-          cursor:pointer; border-bottom:1px solid var(--line); transition:background 0.15s;
-        }
+        .search-results { position:absolute; top:100%; left:0; right:0; z-index:10; background:white; border:1px solid var(--text); border-top:none; max-height:280px; overflow-y:auto; }
+        .search-item { display:flex; gap:12px; align-items:center; padding:12px 14px; cursor:pointer; border-bottom:1px solid var(--line); transition:background 0.15s; }
         .search-item:last-child { border-bottom:none; }
         .search-item:hover { background:var(--bg2); }
-        .search-cover { width:36px; height:48px; object-fit:cover; flex-shrink:0; background:var(--bg3); }
+        .search-cover { width:36px; height:48px; object-fit:cover; flex-shrink:0; }
         .search-cover-empty { width:36px; height:48px; background:var(--bg3); flex-shrink:0; }
         .search-item-title { font-size:13px; font-weight:500; color:var(--text); line-height:1.4; }
         .search-item-author { font-size:11px; color:var(--muted); margin-top:2px; }
         .searching-note { padding:12px 14px; font-size:12px; color:var(--muted); }
-
         .preview-cover { width:60px; height:80px; object-fit:cover; border:1px solid var(--line); margin-top:8px; }
 
         .add-btn { background:var(--text); color:white; border:none; padding:11px 28px; font-size:13px; font-weight:500; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:opacity 0.2s; }
@@ -192,15 +217,28 @@ export default function AdminPage() {
         .add-btn:disabled { opacity:0.4; cursor:not-allowed; }
 
         .books-table { width:100%; background:var(--line); display:flex; flex-direction:column; }
-        .books-row { background:white; padding:16px 20px; display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center; }
+        .books-row { background:white; padding:16px 20px; display:grid; grid-template-columns:1fr auto auto auto auto; gap:12px; align-items:center; }
         .books-row:hover { background:var(--bg2); }
         .book-row-title { font-size:14px; font-weight:500; color:var(--text); }
         .book-row-author { font-size:12px; color:var(--muted); }
         .status-select { border:1px solid var(--line); padding:6px 10px; font-size:12px; font-family:'Noto Sans JP',sans-serif; color:var(--text); background:white; outline:none; cursor:pointer; }
+        .edit-btn { font-size:12px; color:var(--text); background:none; border:none; cursor:pointer; font-family:'Noto Sans JP',sans-serif; white-space:nowrap; }
+        .edit-btn:hover { text-decoration:underline; }
         .pick-btn { font-size:12px; color:var(--blue); background:none; border:none; cursor:pointer; font-family:'Noto Sans JP',sans-serif; white-space:nowrap; }
         .pick-btn:hover { text-decoration:underline; }
         .delete-btn { font-size:12px; color:var(--red); background:none; border:none; cursor:pointer; font-family:'Noto Sans JP',sans-serif; white-space:nowrap; }
         .delete-btn:hover { text-decoration:underline; }
+
+        .edit-panel { background:var(--bg2); border:1px solid var(--line); border-top:none; padding:24px 28px; margin-bottom:2px; }
+        .edit-panel-title { font-size:11px; letter-spacing:2px; color:var(--muted); margin-bottom:16px; }
+        .edit-form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+        @media(max-width:600px){ .edit-form-row { grid-template-columns:1fr; } }
+        .edit-actions { display:flex; gap:12px; margin-top:16px; }
+        .save-btn { background:var(--text); color:white; border:none; padding:9px 24px; font-size:13px; font-weight:500; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:opacity 0.2s; }
+        .save-btn:hover { opacity:0.75; }
+        .save-btn:disabled { opacity:0.4; cursor:not-allowed; }
+        .cancel-btn { background:none; border:1px solid var(--line); color:var(--muted); padding:9px 20px; font-size:13px; cursor:pointer; font-family:'Noto Sans JP',sans-serif; }
+        .cancel-btn:hover { border-color:var(--text); color:var(--text); }
 
         .featured-panel { background:var(--bg2); border:1px solid var(--line); padding:24px 28px; margin-top:16px; }
         .featured-panel-title { font-size:12px; font-weight:500; color:var(--text); margin-bottom:16px; }
@@ -333,18 +371,67 @@ export default function AdminPage() {
           <div className="section-title">本一覧・ステータス管理</div>
           <div className="books-table">
             {books.map((book) => (
-              <div key={book.id} className="books-row">
-                <div>
-                  <div className="book-row-title">{book.title}</div>
-                  <div className="book-row-author">{book.author} · Week {book.week}</div>
+              <div key={book.id}>
+                <div className="books-row">
+                  <div>
+                    <div className="book-row-title">{book.title}</div>
+                    <div className="book-row-author">{book.author} · Week {book.week}{book.genre ? ` · ${book.genre}` : ""}</div>
+                  </div>
+                  <select className="status-select" value={book.status} onChange={(e) => handleStatusChange(book.id, e.target.value)}>
+                    <option value="reading">reading</option>
+                    <option value="open">open</option>
+                    <option value="closed">closed</option>
+                  </select>
+                  <button className="edit-btn" onClick={() => handleStartEdit(book)}>
+                    {editingBook?.id === book.id ? "閉じる" : "編集"}
+                  </button>
+                  <button className="pick-btn" onClick={() => fetchComments(book.id)}>注目コメント</button>
+                  <button className="delete-btn" onClick={() => handleDeleteBook(book.id, book.title)}>削除</button>
                 </div>
-                <select className="status-select" value={book.status} onChange={(e) => handleStatusChange(book.id, e.target.value)}>
-                  <option value="reading">reading</option>
-                  <option value="open">open</option>
-                  <option value="closed">closed</option>
-                </select>
-                <button className="pick-btn" onClick={() => fetchComments(book.id)}>注目コメント</button>
-                <button className="delete-btn" onClick={() => handleDeleteBook(book.id, book.title)}>削除</button>
+
+                {editingBook?.id === book.id && (
+                  <div className="edit-panel">
+                    <div className="edit-panel-title">EDIT · {book.title}</div>
+                    <div className="edit-form-row">
+                      <div>
+                        <label className="form-label">タイトル</label>
+                        <input className="form-input" value={editingBook.title} onChange={(e) => setEditingBook({ ...editingBook, title: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="form-label">著者名</label>
+                        <input className="form-input" value={editingBook.author} onChange={(e) => setEditingBook({ ...editingBook, author: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="edit-form-row">
+                      <div>
+                        <label className="form-label">楽天URL</label>
+                        <input className="form-input" value={editingBook.rakutenUrl} onChange={(e) => setEditingBook({ ...editingBook, rakutenUrl: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="form-label">表紙画像URL</label>
+                        <input className="form-input" value={editingBook.coverUrl} onChange={(e) => setEditingBook({ ...editingBook, coverUrl: e.target.value })} />
+                        {editingBook.coverUrl && <img src={editingBook.coverUrl} alt="" className="preview-cover" />}
+                      </div>
+                    </div>
+                    <div className="edit-form-row">
+                      <div>
+                        <label className="form-label">ジャンル</label>
+                        <select className="form-input" value={editingBook.genre} onChange={(e) => setEditingBook({ ...editingBook, genre: e.target.value })}>
+                          <option value="">未選択</option>
+                          {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="form-label">あらすじ</label>
+                        <textarea className="form-input" style={{resize:"vertical",minHeight:72}} value={editingBook.description} onChange={(e) => setEditingBook({ ...editingBook, description: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="edit-actions">
+                      <button className="save-btn" onClick={handleSaveEdit} disabled={savingEdit}>{savingEdit ? "保存中..." : "保存する"}</button>
+                      <button className="cancel-btn" onClick={() => setEditingBook(null)}>キャンセル</button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

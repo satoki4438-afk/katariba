@@ -18,6 +18,7 @@ export default function HomePage() {
   const router = useRouter();
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeGenre, setActiveGenre] = useState("すべて");
 
   useEffect(() => {
     if (user === null) router.push("/login");
@@ -48,6 +49,9 @@ export default function HomePage() {
 
   if (user === undefined) return null;
 
+  const genres = ["すべて", ...Array.from(new Set(books.map((b) => b.genre).filter(Boolean)))];
+  const filtered = activeGenre === "すべて" ? books : books.filter((b) => b.genre === activeGenre);
+
   return (
     <>
       <style>{`
@@ -72,27 +76,36 @@ export default function HomePage() {
         .home-wrap { max-width:1100px; margin:0 auto; padding:60px 40px; }
         @media(max-width:768px){ .home-wrap { padding:32px 16px; } }
 
-        .home-header { margin-bottom:40px; }
+        .home-header { margin-bottom:24px; }
         .home-title { font-size:clamp(22px,3vw,36px); font-weight:900; color:var(--text); letter-spacing:-1px; margin-bottom:8px; }
         .home-sub { font-size:13px; color:var(--muted); }
+
+        .genre-tabs { display:flex; gap:0; flex-wrap:wrap; margin-bottom:24px; border-bottom:1px solid var(--line); }
+        .genre-tab { font-size:12px; padding:8px 16px; background:none; border:none; cursor:pointer; color:var(--muted); font-family:'Noto Sans JP',sans-serif; border-bottom:2px solid transparent; transition:all 0.15s; white-space:nowrap; }
+        .genre-tab:hover { color:var(--text); }
+        .genre-tab.active { color:var(--text); font-weight:700; border-bottom-color:var(--text); }
 
         .books-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:2px; background:var(--line); }
         @media(max-width:600px){ .books-grid { grid-template-columns:1fr; } }
 
-        .book-card { background:var(--bg); padding:24px; transition:background 0.2s; text-decoration:none; display:flex; gap:16px; align-items:flex-start; }
+        .book-card { background:var(--bg); padding:20px 24px 24px; transition:background 0.2s; text-decoration:none; display:block; }
         .book-card:hover { background:var(--bg2); }
-        .book-cover { width:64px; flex-shrink:0; }
-        .book-cover img { width:64px; height:90px; object-fit:cover; display:block; }
-        .book-cover-empty { width:64px; height:90px; background:var(--bg3); }
-        .book-card-body { flex:1; min-width:0; }
 
-        .book-week-tag { display:inline-block; font-size:10px; font-weight:500; letter-spacing:2px; padding:3px 10px; margin-bottom:12px; }
+        .book-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+        .book-week-tag { display:inline-block; font-size:10px; font-weight:500; letter-spacing:2px; padding:3px 10px; }
         .tag-reading { background:rgba(59,91,219,0.08); color:var(--blue); }
         .tag-open { background:rgba(217,79,61,0.08); color:var(--red); }
         .tag-closed { background:var(--bg3); color:var(--muted); }
+        .book-genre-tag { font-size:10px; color:var(--muted); letter-spacing:1px; }
+
+        .book-card-body { display:flex; gap:16px; align-items:flex-start; }
+        .book-cover { width:64px; flex-shrink:0; }
+        .book-cover img { width:64px; height:90px; object-fit:cover; display:block; }
+        .book-cover-empty { width:64px; height:90px; background:var(--bg3); }
+        .book-card-info { flex:1; min-width:0; }
 
         .book-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px; letter-spacing:-0.3px; line-height:1.4; }
-        .book-author { font-size:13px; color:var(--muted); margin-bottom:16px; }
+        .book-author { font-size:13px; color:var(--muted); margin-bottom:12px; }
 
         .book-footer { display:flex; justify-content:space-between; align-items:center; }
         .book-post-count { font-size:12px; color:var(--muted); }
@@ -127,24 +140,32 @@ export default function HomePage() {
           <p className="home-sub">常時8〜10冊が並走。いつ来ても必ず参加できる本がある。</p>
         </div>
 
+        {!loading && genres.length > 1 && (
+          <div className="genre-tabs">
+            {genres.map((g) => (
+              <button
+                key={g}
+                className={`genre-tab${activeGenre === g ? " active" : ""}`}
+                onClick={() => setActiveGenre(g)}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <p className="loading-state">読み込み中</p>
-        ) : books.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="empty-state">
             <strong>準備中</strong>
             まもなく最初の本が発表されます。
           </div>
         ) : (
           <div className="books-grid">
-            {books.map((book) => (
+            {filtered.map((book) => (
               <Link key={book.id} href={`/book/${book.id}`} className="book-card">
-                <div className="book-cover">
-                  {book.coverUrl
-                    ? <img src={book.coverUrl} alt={book.title} />
-                    : <div className="book-cover-empty" />
-                  }
-                </div>
-                <div className="book-card-body">
+                <div className="book-card-top">
                   <span className={`book-week-tag ${
                     book.status === "reading" ? "tag-reading" :
                     book.status === "open" ? "tag-open" : "tag-closed"
@@ -152,19 +173,30 @@ export default function HomePage() {
                     {book.status === "reading" ? "WEEK 1 · 読書中" :
                      book.status === "open" ? "WEEK 2 · 討論中" : "CLOSED"}
                   </span>
-                  <div className="book-title">{book.title}</div>
-                  <div className="book-author">{book.author}</div>
-                  {book.status === "reading" && (
-                    <div className="book-countdown">開館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
-                  )}
-                  {book.status === "open" && (
-                    <div className="book-countdown">閉館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
-                  )}
-                  <div className="book-footer">
-                    <span className={`book-post-count${book.commentCount > 0 ? " has-posts" : ""}`}>
-                      <strong>{book.commentCount}</strong> 人が投稿中
-                    </span>
-                    <span className="book-arrow">→</span>
+                  {book.genre && <span className="book-genre-tag">{book.genre}</span>}
+                </div>
+                <div className="book-card-body">
+                  <div className="book-cover">
+                    {book.coverUrl
+                      ? <img src={book.coverUrl} alt={book.title} />
+                      : <div className="book-cover-empty" />
+                    }
+                  </div>
+                  <div className="book-card-info">
+                    <div className="book-title">{book.title}</div>
+                    <div className="book-author">{book.author}</div>
+                    {book.status === "reading" && (
+                      <div className="book-countdown">開館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
+                    )}
+                    {book.status === "open" && (
+                      <div className="book-countdown">閉館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
+                    )}
+                    <div className="book-footer">
+                      <span className={`book-post-count${book.commentCount > 0 ? " has-posts" : ""}`}>
+                        <strong>{book.commentCount}</strong> 人が投稿中
+                      </span>
+                      <span className="book-arrow">→</span>
+                    </div>
                   </div>
                 </div>
               </Link>
