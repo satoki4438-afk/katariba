@@ -31,6 +31,7 @@ export default function ChatPage() {
   const [replyTo, setReplyTo] = useState(null);
   const [expanded, setExpanded] = useState({});
   const [replies, setReplies] = useState({});
+  const [liked, setLiked] = useState({});
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -71,8 +72,9 @@ export default function ChatPage() {
   }
 
   async function handleLike(comment) {
-    if (!user) return;
+    if (!user || liked[comment.id]) return;
     if (comment.userId === user.uid) return;
+    setLiked((prev) => ({ ...prev, [comment.id]: true }));
     const ref = doc(db, "books", bookId, "comments", comment.id);
     await updateDoc(ref, { likeCount: increment(1) });
     const likeRef = doc(db, "likes", user.uid, "targets", comment.userId);
@@ -99,7 +101,11 @@ export default function ChatPage() {
         anchorNum: replyTo.num,
         createdAt: serverTimestamp(),
       });
-      if (replies[replyTo.id]) loadReplies(replyTo.id);
+      await updateDoc(doc(db, "books", bookId, "comments", replyTo.id), {
+        replyCount: increment(1),
+      });
+      loadReplies(replyTo.id);
+      setExpanded((prev) => ({ ...prev, [replyTo.id]: true }));
     } else {
       await addDoc(collection(db, "books", bookId, "comments"), {
         userId: user.uid,
@@ -258,8 +264,14 @@ export default function ChatPage() {
               <div className="comment-text">{c.text}</div>
               <div className="comment-footer">
                 {book.status !== "closed" && c.userId !== user.uid && (
-                  <button className="like-btn" onClick={() => handleLike(c)}>
-                    <span style={{color:"var(--red)"}}>♥</span> いいね
+                  <button
+                    className="like-btn"
+                    onClick={() => handleLike(c)}
+                    disabled={!!liked[c.id]}
+                    style={liked[c.id] ? {color:"var(--red)",fontWeight:500} : {}}
+                  >
+                    <span style={{color:"var(--red)"}}>♥</span>
+                    {liked[c.id] ? "いいね済み" : "いいね"}
                   </button>
                 )}
                 {book.status !== "closed" && (
