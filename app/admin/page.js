@@ -263,7 +263,7 @@ export default function AdminPage() {
           <div className="section-title">週次スケジューラー</div>
           <div className="scheduler-box">
             <div className="scheduler-desc">
-              <strong>手動実行</strong>：通常は毎週土曜9時(JST)に自動実行されます。<br />
+              <strong>手動実行</strong>：通常は毎週土曜0時(JST)に自動実行されます。<br />
               実行すると：reading→open→closed のステータス更新と新作2冊の追加が行われます。
             </div>
             <button className="run-btn" onClick={handleRunScheduler} disabled={schedulerRunning}>

@@ -133,10 +133,10 @@ export default function BookPage() {
           {book.status === "reading" ? "投稿する" : "討論スレを見る"}
         </Link>
 
-        {book.amazonUrl && (
+        {book.rakutenUrl && (
           <div>
-            <a href={book.amazonUrl} target="_blank" rel="noopener noreferrer" className="amazon-link">
-              Amazonで見る →
+            <a href={book.rakutenUrl} target="_blank" rel="noopener noreferrer" className="amazon-link">
+              楽天ブックスで見る →
             </a>
           </div>
         )}
