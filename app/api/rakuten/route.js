@@ -4,9 +4,8 @@ export const dynamic = "force-dynamic";
 
 const AFFILIATE_ID = process.env.RAKUTEN_AFFILIATE_ID;
 
-async function fetchBooks(title, langRestrict) {
-  const params = new URLSearchParams({ q: title, maxResults: 10, printType: "books", orderBy: "relevance" });
-  if (langRestrict) params.set("langRestrict", langRestrict);
+async function fetchBooks(q, langRestrict) {
+  const params = new URLSearchParams({ q, maxResults: 10, printType: "books", orderBy: "relevance", langRestrict: langRestrict || "ja" });
   const res = await fetch(`https://www.googleapis.com/books/v1/volumes?${params}`);
   const data = await res.json();
   return data.items || [];
@@ -28,20 +27,20 @@ export async function GET(req) {
   const title = searchParams.get("title");
   if (!title) return NextResponse.json({ error: "title required" }, { status: 400 });
 
-  const [jaItems, allItems] = await Promise.all([
-    fetchBooks(title, "ja"),
-    fetchBooks(title, null),
-  ]);
+  // タイトル限定検索を優先、結果が少なければ全フィールド検索で補充
+  const intitleItems = await fetchBooks(`intitle:${title}`);
+  let results = intitleItems.filter((i) => i.volumeInfo.language === "ja");
 
-  const seen = new Set();
-  const merged = [];
-  for (const item of [...jaItems, ...allItems]) {
-    if (seen.has(item.id)) continue;
-    seen.add(item.id);
-    merged.push(item);
+  if (results.length < 3) {
+    const broadItems = await fetchBooks(title);
+    const seen = new Set(results.map((i) => i.id));
+    for (const item of broadItems) {
+      if (!seen.has(item.id) && item.volumeInfo.language === "ja") {
+        results.push(item);
+        seen.add(item.id);
+      }
+    }
   }
 
-  merged.sort((a, b) => (a.volumeInfo.language === "ja" ? 0 : 1) - (b.volumeInfo.language === "ja" ? 0 : 1));
-
-  return NextResponse.json({ items: merged.slice(0, 5).map(mapItem) });
+  return NextResponse.json({ items: results.slice(0, 5).map(mapItem) });
 }
