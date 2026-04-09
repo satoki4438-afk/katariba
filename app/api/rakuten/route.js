@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+const APP_ID = process.env.RAKUTEN_API_KEY;
 const AFFILIATE_ID = process.env.RAKUTEN_AFFILIATE_ID;
 
 export async function GET(req) {
@@ -9,35 +10,36 @@ export async function GET(req) {
   const title = searchParams.get("title");
   if (!title) return NextResponse.json({ error: "title required" }, { status: 400 });
 
+  const params = new URLSearchParams({
+    applicationId: APP_ID,
+    title,
+    hits: 5,
+    formatVersion: 2,
+  });
+
   const res = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(title)}&langRestrict=ja&maxResults=10&printType=books`
+    `https://app.rakuten.co.jp/services/api/BooksBook/Search/20170404?${params}`
   );
   const data = await res.json();
 
-  if (!data.items || data.items.length === 0) {
-    return NextResponse.json({ items: [] });
+  // エラー時はデバッグ情報ごと返す
+  if (data.error || !data.Items || data.Items.length === 0) {
+    return NextResponse.json({ items: [], _debug: data });
   }
 
-  const items = data.items
-    .filter((item) => item.volumeInfo.language === "ja")
-    .slice(0, 5)
-    .map((item) => {
-      const info = item.volumeInfo;
-      const isbn = info.industryIdentifiers?.find((id) => id.type === "ISBN_13")?.identifier
-        || info.industryIdentifiers?.find((id) => id.type === "ISBN_10")?.identifier;
-      const rakutenUrl = isbn && AFFILIATE_ID
-        ? `https://hb.afl.rakuten.co.jp/hgc/${AFFILIATE_ID}/?pc=${encodeURIComponent(`https://books.rakuten.co.jp/search?sitem=${isbn}`)}`
-        : null;
-      const cover = info.imageLinks?.thumbnail?.replace("http://", "https://") || null;
-      return {
-        title: info.title,
-        author: info.authors?.join(", ") || "",
-        coverUrl: cover,
-        rakutenUrl,
-        isbn,
-        description: info.description || null,
-      };
-    });
+  const items = data.Items.map((b) => {
+    const rakutenUrl = AFFILIATE_ID && b.itemUrl
+      ? `https://hb.afl.rakuten.co.jp/hgc/${AFFILIATE_ID}/?pc=${encodeURIComponent(b.itemUrl)}`
+      : b.itemUrl || null;
+    return {
+      title: b.title,
+      author: b.author || "",
+      coverUrl: b.largeImageUrl || b.mediumImageUrl || null,
+      rakutenUrl,
+      isbn: b.isbn || null,
+      description: null,
+    };
+  });
 
   return NextResponse.json({ items });
 }
