@@ -7,6 +7,12 @@ import { auth, db } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { collection, query, orderBy, getDocs, getCountFromServer } from "firebase/firestore";
 
+function daysUntilNextSaturday() {
+  const now = new Date();
+  const day = now.getDay();
+  return day === 6 ? 7 : 6 - day;
+}
+
 export default function HomePage() {
   const { user, userData } = useAuth();
   const router = useRouter();
@@ -94,6 +100,8 @@ export default function HomePage() {
         .book-post-count.has-posts strong { color:var(--red); }
         .book-arrow { font-size:13px; color:var(--muted); transition:transform 0.2s; }
         .book-card:hover .book-arrow { transform:translateX(4px); }
+        .book-countdown { font-size:11px; color:var(--muted); margin-bottom:12px; letter-spacing:0.3px; }
+        .book-countdown span { font-weight:700; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; }
 
         .empty-state { text-align:center; padding:80px 20px; color:var(--muted); font-size:14px; line-height:2; }
         .empty-state strong { display:block; font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px; }
@@ -146,6 +154,12 @@ export default function HomePage() {
                   </span>
                   <div className="book-title">{book.title}</div>
                   <div className="book-author">{book.author}</div>
+                  {book.status === "reading" && (
+                    <div className="book-countdown">開館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
+                  )}
+                  {book.status === "open" && (
+                    <div className="book-countdown">閉館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
+                  )}
                   <div className="book-footer">
                     <span className={`book-post-count${book.commentCount > 0 ? " has-posts" : ""}`}>
                       <strong>{book.commentCount}</strong> 人が投稿中
