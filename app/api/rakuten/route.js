@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const AFFILIATE_ID = process.env.RAKUTEN_AFFILIATE_ID;
 
 async function fetchBooks(title, langRestrict) {

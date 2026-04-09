@@ -59,8 +59,10 @@ export default function AdminPage() {
     try {
       const res = await fetch(`/api/rakuten?title=${encodeURIComponent(title)}`);
       const data = await res.json();
+      if (data.error) console.error("[search]", data.error, data);
       setSearchResults(data.items || []);
-    } catch {
+    } catch (e) {
+      console.error("[search]", e);
       setSearchResults([]);
     }
     setSearching(false);
