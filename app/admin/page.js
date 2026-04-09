@@ -238,7 +238,7 @@ export default function AdminPage() {
                 <label className="form-label">タイトル *</label>
                 <input
                   className="form-input"
-                  placeholder="タイトルを入力すると楽天から自動検索"
+                  placeholder="タイトルを入力すると自動検索"
                   value={newBook.title}
                   onChange={handleTitleChange}
                   autoComplete="off"
@@ -260,7 +260,7 @@ export default function AdminPage() {
                     ))}
                   </div>
                 )}
-                <div className="form-hint">2文字以上で楽天ブックスを自動検索します</div>
+                <div className="form-hint">2文字以上で書籍を自動検索します</div>
               </div>
               <div>
                 <label className="form-label">著者名</label>

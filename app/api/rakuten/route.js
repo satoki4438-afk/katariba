@@ -8,7 +8,7 @@ export async function GET(req) {
   if (!title) return NextResponse.json({ error: "title required" }, { status: 400 });
 
   const res = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(title)}&langRestrict=ja&maxResults=5&printType=books`
+    `https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}&langRestrict=ja&maxResults=10&printType=books&orderBy=relevance`
   );
   const data = await res.json();
 
@@ -16,7 +16,13 @@ export async function GET(req) {
     return NextResponse.json({ items: [] });
   }
 
-  const items = data.items.map((item) => {
+  const jaItems = data.items.filter((item) => {
+    const lang = item.volumeInfo.language;
+    return lang === "ja" || !lang;
+  });
+  const candidates = jaItems.length > 0 ? jaItems : data.items;
+
+  const items = candidates.slice(0, 5).map((item) => {
     const info = item.volumeInfo;
     const isbn = info.industryIdentifiers?.find((id) => id.type === "ISBN_13")?.identifier
       || info.industryIdentifiers?.find((id) => id.type === "ISBN_10")?.identifier;
