@@ -73,15 +73,19 @@ export default function HomePage() {
         .books-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:2px; background:var(--line); }
         @media(max-width:600px){ .books-grid { grid-template-columns:1fr; } }
 
-        .book-card { background:var(--bg); padding:28px 24px; transition:background 0.2s; text-decoration:none; display:block; }
+        .book-card { background:var(--bg); padding:24px; transition:background 0.2s; text-decoration:none; display:flex; gap:16px; align-items:flex-start; }
         .book-card:hover { background:var(--bg2); }
+        .book-cover { width:64px; flex-shrink:0; }
+        .book-cover img { width:64px; height:90px; object-fit:cover; display:block; }
+        .book-cover-empty { width:64px; height:90px; background:var(--bg3); }
+        .book-card-body { flex:1; min-width:0; }
 
-        .book-week-tag { display:inline-block; font-size:10px; font-weight:500; letter-spacing:2px; padding:3px 10px; margin-bottom:14px; }
+        .book-week-tag { display:inline-block; font-size:10px; font-weight:500; letter-spacing:2px; padding:3px 10px; margin-bottom:12px; }
         .tag-reading { background:rgba(59,91,219,0.08); color:var(--blue); }
         .tag-open { background:rgba(217,79,61,0.08); color:var(--red); }
         .tag-closed { background:var(--bg3); color:var(--muted); }
 
-        .book-title { font-size:17px; font-weight:700; color:var(--text); margin-bottom:4px; letter-spacing:-0.3px; line-height:1.4; }
+        .book-title { font-size:16px; font-weight:700; color:var(--text); margin-bottom:4px; letter-spacing:-0.3px; line-height:1.4; }
         .book-author { font-size:13px; color:var(--muted); margin-bottom:16px; }
 
         .book-footer { display:flex; justify-content:space-between; align-items:center; }
@@ -126,20 +130,28 @@ export default function HomePage() {
           <div className="books-grid">
             {books.map((book) => (
               <Link key={book.id} href={`/book/${book.id}`} className="book-card">
-                <span className={`book-week-tag ${
-                  book.status === "reading" ? "tag-reading" :
-                  book.status === "open" ? "tag-open" : "tag-closed"
-                }`}>
-                  {book.status === "reading" ? "WEEK 1 · 読書中" :
-                   book.status === "open" ? "WEEK 2 · 討論中" : "CLOSED"}
-                </span>
-                <div className="book-title">{book.title}</div>
-                <div className="book-author">{book.author}</div>
-                <div className="book-footer">
-                  <span className={`book-post-count${book.commentCount > 0 ? " has-posts" : ""}`}>
-                    <strong>{book.commentCount}</strong> 人が投稿中
+                <div className="book-cover">
+                  {book.coverUrl
+                    ? <img src={book.coverUrl} alt={book.title} />
+                    : <div className="book-cover-empty" />
+                  }
+                </div>
+                <div className="book-card-body">
+                  <span className={`book-week-tag ${
+                    book.status === "reading" ? "tag-reading" :
+                    book.status === "open" ? "tag-open" : "tag-closed"
+                  }`}>
+                    {book.status === "reading" ? "WEEK 1 · 読書中" :
+                     book.status === "open" ? "WEEK 2 · 討論中" : "CLOSED"}
                   </span>
-                  <span className="book-arrow">→</span>
+                  <div className="book-title">{book.title}</div>
+                  <div className="book-author">{book.author}</div>
+                  <div className="book-footer">
+                    <span className={`book-post-count${book.commentCount > 0 ? " has-posts" : ""}`}>
+                      <strong>{book.commentCount}</strong> 人が投稿中
+                    </span>
+                    <span className="book-arrow">→</span>
+                  </div>
                 </div>
               </Link>
             ))}
