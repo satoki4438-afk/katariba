@@ -18,7 +18,8 @@ function mapItem(item) {
     ? `https://hb.afl.rakuten.co.jp/hgc/${AFFILIATE_ID}/?pc=${encodeURIComponent(`https://books.rakuten.co.jp/search?sitem=${isbn}`)}`
     : null;
   const cover = info.imageLinks?.thumbnail?.replace("http://", "https://") || null;
-  return { title: info.title, author: info.authors?.join(", ") || "", coverUrl: cover, rakutenUrl, isbn, lang: info.language };
+  const description = info.description || null;
+  return { title: info.title, author: info.authors?.join(", ") || "", coverUrl: cover, rakutenUrl, isbn, lang: info.language, description };
 }
 
 export async function GET(req) {

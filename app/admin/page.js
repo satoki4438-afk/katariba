@@ -20,7 +20,8 @@ export default function AdminPage() {
   const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [schedulerResult, setSchedulerResult] = useState("");
 
-  const [newBook, setNewBook] = useState({ title: "", author: "", rakutenUrl: "", coverUrl: "" });
+  const GENRES = ["SF","恋愛","ミステリー","ファンタジー","ラノベ","歴史","エッセイ","ホラー","純文学","ノンフィクション","その他"];
+  const [newBook, setNewBook] = useState({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "" });
   const [addingBook, setAddingBook] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -63,12 +64,14 @@ export default function AdminPage() {
   }
 
   function applyResult(item) {
-    setNewBook({
+    setNewBook((prev) => ({
+      ...prev,
       title: item.title,
       author: item.author,
       rakutenUrl: item.rakutenUrl || "",
       coverUrl: item.coverUrl || "",
-    });
+      description: item.description || "",
+    }));
     setSearchResults([]);
   }
 
@@ -80,12 +83,14 @@ export default function AdminPage() {
       author: newBook.author.trim(),
       rakutenUrl: newBook.rakutenUrl.trim() || null,
       coverUrl: newBook.coverUrl.trim() || null,
+      genre: newBook.genre || null,
+      description: newBook.description.trim() || null,
       status: "reading",
       week: 1,
       source: "manual",
       createdAt: serverTimestamp(),
     });
-    setNewBook({ title: "", author: "", rakutenUrl: "", coverUrl: "" });
+    setNewBook({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "" });
     setAddingBook(false);
     fetchBooks();
   }
@@ -272,7 +277,7 @@ export default function AdminPage() {
                 />
               </div>
             </div>
-            <div className="form-row" style={{marginBottom:20}}>
+            <div className="form-row">
               <div>
                 <label className="form-label">楽天URL（アフィリエイト付き）</label>
                 <input
@@ -293,6 +298,29 @@ export default function AdminPage() {
                 {newBook.coverUrl && (
                   <img src={newBook.coverUrl} alt="表紙プレビュー" className="preview-cover" />
                 )}
+              </div>
+            </div>
+            <div className="form-row" style={{marginBottom:20}}>
+              <div>
+                <label className="form-label">ジャンル</label>
+                <select
+                  className="form-input"
+                  value={newBook.genre}
+                  onChange={(e) => setNewBook({ ...newBook, genre: e.target.value })}
+                >
+                  <option value="">未選択</option>
+                  {GENRES.map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">あらすじ</label>
+                <textarea
+                  className="form-input"
+                  style={{resize:"vertical",minHeight:72}}
+                  placeholder="自動入力 or 手動入力"
+                  value={newBook.description}
+                  onChange={(e) => setNewBook({ ...newBook, description: e.target.value })}
+                />
               </div>
             </div>
             <button className="add-btn" onClick={handleAddBook} disabled={addingBook || !newBook.title.trim()}>
