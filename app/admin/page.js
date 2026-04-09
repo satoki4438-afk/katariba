@@ -93,6 +93,16 @@ export default function AdminPage() {
     fetchBooks();
   }
 
+  async function handleDeleteBook(bookId, title) {
+    if (!window.confirm(`「${title}」を削除しますか？`)) return;
+    await deleteDoc(doc(db, "books", bookId));
+    if (selectedBookId === bookId) {
+      setSelectedBookId("");
+      setFeaturedCandidates([]);
+    }
+    fetchBooks();
+  }
+
   if (user === undefined) return null;
   if (user && !ADMIN_EMAILS.includes(user.email)) return null;
 
@@ -126,13 +136,15 @@ export default function AdminPage() {
         .add-btn:disabled { opacity:0.4; cursor:not-allowed; }
 
         .books-table { width:100%; border-collapse:collapse; background:var(--line); gap:1px; display:flex; flex-direction:column; }
-        .books-row { background:white; padding:16px 20px; display:grid; grid-template-columns:1fr auto auto; gap:16px; align-items:center; }
+        .books-row { background:white; padding:16px 20px; display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center; }
         .books-row:hover { background:var(--bg2); }
         .book-row-title { font-size:14px; font-weight:500; color:var(--text); }
         .book-row-author { font-size:12px; color:var(--muted); }
         .status-select { border:1px solid var(--line); padding:6px 10px; font-size:12px; font-family:'Noto Sans JP',sans-serif; color:var(--text); background:white; outline:none; cursor:pointer; }
         .pick-btn { font-size:12px; color:var(--blue); background:none; border:none; cursor:pointer; font-family:'Noto Sans JP',sans-serif; white-space:nowrap; }
         .pick-btn:hover { text-decoration:underline; }
+        .delete-btn { font-size:12px; color:var(--red); background:none; border:none; cursor:pointer; font-family:'Noto Sans JP',sans-serif; white-space:nowrap; }
+        .delete-btn:hover { text-decoration:underline; }
 
         .featured-panel { background:var(--bg2); border:1px solid var(--line); padding:24px 28px; margin-top:16px; }
         .featured-panel-title { font-size:12px; font-weight:500; color:var(--text); margin-bottom:16px; }
@@ -216,6 +228,9 @@ export default function AdminPage() {
                 </select>
                 <button className="pick-btn" onClick={() => fetchComments(book.id)}>
                   注目コメント
+                </button>
+                <button className="delete-btn" onClick={() => handleDeleteBook(book.id, book.title)}>
+                  削除
                 </button>
               </div>
             ))}
