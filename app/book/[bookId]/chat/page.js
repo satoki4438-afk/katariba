@@ -165,6 +165,7 @@ export default function ChatPage() {
         .comment-text { font-size:14px; color:var(--text); line-height:1.9; white-space:pre-wrap; }
         .comment-anchor { color:var(--blue); font-weight:500; }
         .comment-footer { display:flex; align-items:center; gap:16px; margin-top:10px; }
+        .like-count { font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; color:var(--red); margin-left:auto; }
         .like-btn {
           font-size:12px; color:var(--muted); background:none; border:none;
           cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:color 0.2s;
@@ -257,9 +258,7 @@ export default function ChatPage() {
                   <span className="comment-num">{c.num}</span>
                   <span className="comment-id">{c.anonymousId}{c.userId === user.uid ? "（自分）" : ""}</span>
                 </div>
-                <span style={{fontSize:"11px",color:"var(--muted)"}}>
-                  {c.likeCount > 0 && <span style={{color:"var(--red)",fontWeight:500,marginRight:8}}>{c.likeCount} いいね</span>}
-                </span>
+                <span />
               </div>
               <div className="comment-text">{c.text}</div>
               <div className="comment-footer">
@@ -281,6 +280,9 @@ export default function ChatPage() {
                   <button className="expand-btn" onClick={() => toggleExpand(c.id)}>
                     {expanded[c.id] ? "閉じる" : `返信 ${c.replyCount}件`}
                   </button>
+                )}
+                {(c.likeCount > 0 || liked[c.id]) && (
+                  <span className="like-count">♥ {c.likeCount || 0}</span>
                 )}
               </div>
 
