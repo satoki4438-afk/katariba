@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import {
   collection, query, orderBy, getDocs, addDoc, updateDoc,
-  doc, serverTimestamp, where, deleteDoc
+  doc, serverTimestamp, deleteDoc
 } from "firebase/firestore";
 
 const ADMIN_EMAILS = ["tas.studio2026@gmail.com"];
@@ -20,8 +20,11 @@ export default function AdminPage() {
   const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [schedulerResult, setSchedulerResult] = useState("");
 
-  const [newBook, setNewBook] = useState({ title: "", author: "", amazonUrl: "", coverUrl: "" });
+  const [newBook, setNewBook] = useState({ title: "", author: "", rakutenUrl: "", coverUrl: "" });
   const [addingBook, setAddingBook] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef(null);
 
   useEffect(() => {
     if (user === null) { router.push("/login"); return; }
@@ -38,6 +41,55 @@ export default function AdminPage() {
     setBooks(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   }
 
+  function handleTitleChange(e) {
+    const val = e.target.value;
+    setNewBook((prev) => ({ ...prev, title: val }));
+    setSearchResults([]);
+    clearTimeout(searchTimer.current);
+    if (val.trim().length < 2) return;
+    searchTimer.current = setTimeout(() => searchRakuten(val.trim()), 600);
+  }
+
+  async function searchRakuten(title) {
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/rakuten?title=${encodeURIComponent(title)}`);
+      const data = await res.json();
+      setSearchResults(data.items || []);
+    } catch {
+      setSearchResults([]);
+    }
+    setSearching(false);
+  }
+
+  function applyResult(item) {
+    setNewBook({
+      title: item.title,
+      author: item.author,
+      rakutenUrl: item.rakutenUrl || "",
+      coverUrl: item.coverUrl || "",
+    });
+    setSearchResults([]);
+  }
+
+  async function handleAddBook() {
+    if (!newBook.title.trim()) return;
+    setAddingBook(true);
+    await addDoc(collection(db, "books"), {
+      title: newBook.title.trim(),
+      author: newBook.author.trim(),
+      rakutenUrl: newBook.rakutenUrl.trim() || null,
+      coverUrl: newBook.coverUrl.trim() || null,
+      status: "reading",
+      week: 1,
+      source: "manual",
+      createdAt: serverTimestamp(),
+    });
+    setNewBook({ title: "", author: "", rakutenUrl: "", coverUrl: "" });
+    setAddingBook(false);
+    fetchBooks();
+  }
+
   async function fetchComments(bookId) {
     setSelectedBookId(bookId);
     const snap = await getDocs(
@@ -47,9 +99,7 @@ export default function AdminPage() {
   }
 
   async function toggleFeatured(bookId, commentId, current) {
-    await updateDoc(doc(db, "books", bookId, "comments", commentId), {
-      featured: !current,
-    });
+    await updateDoc(doc(db, "books", bookId, "comments", commentId), { featured: !current });
     fetchComments(bookId);
   }
 
@@ -70,24 +120,6 @@ export default function AdminPage() {
     setSchedulerRunning(false);
   }
 
-  async function handleAddBook() {
-    if (!newBook.title.trim()) return;
-    setAddingBook(true);
-    await addDoc(collection(db, "books"), {
-      title: newBook.title.trim(),
-      author: newBook.author.trim(),
-      amazonUrl: newBook.amazonUrl.trim() || null,
-      coverUrl: newBook.coverUrl.trim() || null,
-      status: "reading",
-      week: 1,
-      source: "manual",
-      createdAt: serverTimestamp(),
-    });
-    setNewBook({ title: "", author: "", amazonUrl: "", coverUrl: "" });
-    setAddingBook(false);
-    fetchBooks();
-  }
-
   async function handleStatusChange(bookId, status) {
     await updateDoc(doc(db, "books", bookId), { status });
     fetchBooks();
@@ -96,10 +128,7 @@ export default function AdminPage() {
   async function handleDeleteBook(bookId, title) {
     if (!window.confirm(`「${title}」を削除しますか？`)) return;
     await deleteDoc(doc(db, "books", bookId));
-    if (selectedBookId === bookId) {
-      setSelectedBookId("");
-      setFeaturedCandidates([]);
-    }
+    if (selectedBookId === bookId) { setSelectedBookId(""); setFeaturedCandidates([]); }
     fetchBooks();
   }
 
@@ -128,14 +157,36 @@ export default function AdminPage() {
         .add-book-form { background:var(--bg2); border:1px solid var(--line); padding:28px 32px; }
         .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
         @media(max-width:600px){ .form-row { grid-template-columns:1fr; } }
+        .form-field { position:relative; }
         .form-input { width:100%; border:1px solid var(--line); padding:11px 14px; font-size:13px; font-family:'Noto Sans JP',sans-serif; color:var(--text); background:white; outline:none; }
         .form-input:focus { border-color:var(--text); }
         .form-label { font-size:10px; letter-spacing:2px; color:var(--muted); display:block; margin-bottom:6px; }
+        .form-hint { font-size:11px; color:var(--muted); margin-top:4px; }
+
+        .search-results {
+          position:absolute; top:100%; left:0; right:0; z-index:10;
+          background:white; border:1px solid var(--text); border-top:none;
+          max-height:280px; overflow-y:auto;
+        }
+        .search-item {
+          display:flex; gap:12px; align-items:center; padding:12px 14px;
+          cursor:pointer; border-bottom:1px solid var(--line); transition:background 0.15s;
+        }
+        .search-item:last-child { border-bottom:none; }
+        .search-item:hover { background:var(--bg2); }
+        .search-cover { width:36px; height:48px; object-fit:cover; flex-shrink:0; background:var(--bg3); }
+        .search-cover-empty { width:36px; height:48px; background:var(--bg3); flex-shrink:0; }
+        .search-item-title { font-size:13px; font-weight:500; color:var(--text); line-height:1.4; }
+        .search-item-author { font-size:11px; color:var(--muted); margin-top:2px; }
+        .searching-note { padding:12px 14px; font-size:12px; color:var(--muted); }
+
+        .preview-cover { width:60px; height:80px; object-fit:cover; border:1px solid var(--line); margin-top:8px; }
+
         .add-btn { background:var(--text); color:white; border:none; padding:11px 28px; font-size:13px; font-weight:500; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:opacity 0.2s; }
         .add-btn:hover { opacity:0.75; }
         .add-btn:disabled { opacity:0.4; cursor:not-allowed; }
 
-        .books-table { width:100%; border-collapse:collapse; background:var(--line); gap:1px; display:flex; flex-direction:column; }
+        .books-table { width:100%; background:var(--line); display:flex; flex-direction:column; }
         .books-row { background:white; padding:16px 20px; display:grid; grid-template-columns:1fr auto auto auto; gap:16px; align-items:center; }
         .books-row:hover { background:var(--bg2); }
         .book-row-title { font-size:14px; font-weight:500; color:var(--text); }
@@ -183,23 +234,65 @@ export default function AdminPage() {
           <div className="section-title">本を手動追加</div>
           <div className="add-book-form">
             <div className="form-row">
-              <div>
+              <div className="form-field">
                 <label className="form-label">タイトル *</label>
-                <input className="form-input" placeholder="本のタイトル" value={newBook.title} onChange={(e) => setNewBook({ ...newBook, title: e.target.value })} />
+                <input
+                  className="form-input"
+                  placeholder="タイトルを入力すると楽天から自動検索"
+                  value={newBook.title}
+                  onChange={handleTitleChange}
+                  autoComplete="off"
+                />
+                {searching && <div className="search-results"><div className="searching-note">検索中...</div></div>}
+                {!searching && searchResults.length > 0 && (
+                  <div className="search-results">
+                    {searchResults.map((item, i) => (
+                      <div key={i} className="search-item" onClick={() => applyResult(item)}>
+                        {item.coverUrl
+                          ? <img src={item.coverUrl} alt="" className="search-cover" />
+                          : <div className="search-cover-empty" />
+                        }
+                        <div>
+                          <div className="search-item-title">{item.title}</div>
+                          <div className="search-item-author">{item.author}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="form-hint">2文字以上で楽天ブックスを自動検索します</div>
               </div>
               <div>
                 <label className="form-label">著者名</label>
-                <input className="form-input" placeholder="著者名" value={newBook.author} onChange={(e) => setNewBook({ ...newBook, author: e.target.value })} />
+                <input
+                  className="form-input"
+                  placeholder="自動入力 or 手動入力"
+                  value={newBook.author}
+                  onChange={(e) => setNewBook({ ...newBook, author: e.target.value })}
+                />
               </div>
             </div>
             <div className="form-row" style={{marginBottom:20}}>
               <div>
-                <label className="form-label">Amazon URL</label>
-                <input className="form-input" placeholder="https://amazon.co.jp/..." value={newBook.amazonUrl} onChange={(e) => setNewBook({ ...newBook, amazonUrl: e.target.value })} />
+                <label className="form-label">楽天URL（アフィリエイト付き）</label>
+                <input
+                  className="form-input"
+                  placeholder="自動入力 or 手動入力"
+                  value={newBook.rakutenUrl}
+                  onChange={(e) => setNewBook({ ...newBook, rakutenUrl: e.target.value })}
+                />
               </div>
               <div>
-                <label className="form-label">表紙画像 URL</label>
-                <input className="form-input" placeholder="https://..." value={newBook.coverUrl} onChange={(e) => setNewBook({ ...newBook, coverUrl: e.target.value })} />
+                <label className="form-label">表紙画像URL</label>
+                <input
+                  className="form-input"
+                  placeholder="自動入力 or 手動入力"
+                  value={newBook.coverUrl}
+                  onChange={(e) => setNewBook({ ...newBook, coverUrl: e.target.value })}
+                />
+                {newBook.coverUrl && (
+                  <img src={newBook.coverUrl} alt="表紙プレビュー" className="preview-cover" />
+                )}
               </div>
             </div>
             <button className="add-btn" onClick={handleAddBook} disabled={addingBook || !newBook.title.trim()}>
@@ -217,30 +310,20 @@ export default function AdminPage() {
                   <div className="book-row-title">{book.title}</div>
                   <div className="book-row-author">{book.author} · Week {book.week}</div>
                 </div>
-                <select
-                  className="status-select"
-                  value={book.status}
-                  onChange={(e) => handleStatusChange(book.id, e.target.value)}
-                >
+                <select className="status-select" value={book.status} onChange={(e) => handleStatusChange(book.id, e.target.value)}>
                   <option value="reading">reading</option>
                   <option value="open">open</option>
                   <option value="closed">closed</option>
                 </select>
-                <button className="pick-btn" onClick={() => fetchComments(book.id)}>
-                  注目コメント
-                </button>
-                <button className="delete-btn" onClick={() => handleDeleteBook(book.id, book.title)}>
-                  削除
-                </button>
+                <button className="pick-btn" onClick={() => fetchComments(book.id)}>注目コメント</button>
+                <button className="delete-btn" onClick={() => handleDeleteBook(book.id, book.title)}>削除</button>
               </div>
             ))}
           </div>
 
           {selectedBookId && featuredCandidates.length > 0 && (
             <div className="featured-panel">
-              <div className="featured-panel-title">
-                注目コメントを選ぶ（いいね順 上位20件）
-              </div>
+              <div className="featured-panel-title">注目コメントを選ぶ（いいね順 上位20件）</div>
               {featuredCandidates.map((c) => (
                 <div key={c.id} className="comment-row">
                   <div className="comment-row-likes">{c.likeCount || 0} いいね</div>
