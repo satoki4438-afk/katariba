@@ -8,7 +8,7 @@ import {
   doc, serverTimestamp, deleteDoc
 } from "firebase/firestore";
 
-const ADMIN_EMAILS = ["tas.studio2026@gmail.com"];
+const ADMIN_EMAILS = ["tas.studio2026@gmail.com", "satoki4438@gmail.com"];
 
 export default function AdminPage() {
   const { user } = useAuth();

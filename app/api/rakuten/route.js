@@ -22,7 +22,7 @@ export async function GET(req) {
       || info.industryIdentifiers?.find((id) => id.type === "ISBN_10")?.identifier;
 
     const rakutenUrl = isbn && AFFILIATE_ID
-      ? `https://hb.afl.rakuten.co.jp/hgc/${AFFILIATE_ID}/?pc=https://books.rakuten.co.jp/search?sitem=${isbn}&m=http://m.rakuten.co.jp/books/search/?sitem=${isbn}`
+      ? `https://hb.afl.rakuten.co.jp/hgc/${AFFILIATE_ID}/?pc=${encodeURIComponent(`https://books.rakuten.co.jp/search?sitem=${isbn}`)}`
       : null;
 
     const cover = info.imageLinks?.thumbnail?.replace("http://", "https://") || null;
