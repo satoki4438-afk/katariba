@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
 export default function BookPage() {
@@ -14,6 +14,7 @@ export default function BookPage() {
   const [book, setBook] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [descOpen, setDescOpen] = useState(false);
 
   useEffect(() => {
     if (user === null) router.push("/login");
@@ -49,10 +50,16 @@ export default function BookPage() {
           display:inline-block; font-size:10px; font-weight:500; letter-spacing:2px;
           padding:4px 12px; border:1px solid; margin-bottom:24px;
         }
-        .book-detail-title { font-size:clamp(28px,4vw,44px); font-weight:900; color:var(--text); letter-spacing:-1.5px; line-height:1.2; margin-bottom:12px; }
-        .book-detail-author { font-size:15px; color:var(--muted); margin-bottom:40px; }
-        .book-meta-row { display:flex; gap:40px; padding:24px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:40px; }
-        .book-meta-item { }
+        .book-header { display:flex; gap:24px; align-items:flex-start; margin-bottom:12px; }
+        .book-header-cover { flex-shrink:0; }
+        .book-header-cover img { width:80px; height:112px; object-fit:cover; display:block; border:1px solid var(--line); }
+        .book-header-cover-empty { width:80px; height:112px; background:var(--bg3); }
+        .book-header-body { flex:1; min-width:0; }
+        .book-detail-title { font-size:clamp(24px,4vw,40px); font-weight:900; color:var(--text); letter-spacing:-1.5px; line-height:1.2; margin-bottom:10px; }
+        .book-detail-author { font-size:15px; color:var(--muted); margin-bottom:12px; }
+        .book-desc-toggle { background:none; border:none; cursor:pointer; font-size:13px; color:var(--blue); font-family:'Noto Sans JP',sans-serif; padding:0; }
+        .book-desc-text { font-size:13px; color:var(--muted); line-height:1.9; margin-top:10px; }
+        .book-meta-row { display:flex; gap:40px; padding:24px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin-bottom:40px; margin-top:28px; }
         .book-meta-label { font-size:10px; letter-spacing:2px; color:var(--muted); margin-bottom:6px; }
         .book-meta-value { font-size:16px; font-weight:700; color:var(--text); }
         .book-week-note {
@@ -66,11 +73,6 @@ export default function BookPage() {
           text-decoration:none; transition:opacity 0.2s;
         }
         .btn-chat:hover { opacity:0.75; }
-        .btn-chat-disabled {
-          display:inline-block; background:var(--bg3); color:var(--muted);
-          padding:16px 48px; font-size:14px; font-weight:500; letter-spacing:0.5px;
-          cursor:not-allowed;
-        }
         .back-link { font-size:13px; color:var(--muted); text-decoration:none; display:inline-flex; align-items:center; gap:6px; margin-bottom:32px; transition:color 0.2s; }
         .back-link:hover { color:var(--text); }
         .amazon-link { display:inline-block; margin-top:20px; font-size:13px; color:var(--blue); text-decoration:none; border-bottom:1px solid var(--blue); padding-bottom:1px; }
@@ -85,8 +87,26 @@ export default function BookPage() {
           {statusLabel}
         </span>
 
-        <h1 className="book-detail-title">{book.title}</h1>
-        <p className="book-detail-author">{book.author}</p>
+        <div className="book-header">
+          <div className="book-header-cover">
+            {book.coverUrl
+              ? <img src={book.coverUrl} alt={book.title} />
+              : <div className="book-header-cover-empty" />
+            }
+          </div>
+          <div className="book-header-body">
+            <h1 className="book-detail-title">{book.title}</h1>
+            <p className="book-detail-author">{book.author}</p>
+            {book.description && (
+              <>
+                <button className="book-desc-toggle" onClick={() => setDescOpen((v) => !v)}>
+                  {descOpen ? "△ 閉じる" : "▽ あらすじ"}
+                </button>
+                {descOpen && <p className="book-desc-text">{book.description}</p>}
+              </>
+            )}
+          </div>
+        </div>
 
         <div className="book-meta-row">
           <div className="book-meta-item">
