@@ -199,7 +199,7 @@ export default function ProfilePage() {
     setIconUploading(true);
     try {
       const storageRef = ref(storage, `icons/${user.uid}`);
-      await uploadBytes(storageRef, file);
+      await uploadBytes(storageRef, file, { contentType: file.type });
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, "users", user.uid), { iconUrl: url });
       setIconUrl(url);
