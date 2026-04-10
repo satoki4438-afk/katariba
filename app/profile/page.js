@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const { user, userData } = useAuth();
   const router = useRouter();
   const iconInputRef = useRef(null);
+  const searchTimer = useRef(null);
 
   const [activeTab, setActiveTab] = useState("bookshelf");
 
@@ -43,9 +44,11 @@ export default function ProfilePage() {
   const [bookshelf, setBookshelf] = useState([]);
   const [bookshelfLoading, setBookshelfLoading] = useState(true);
   const [addingBook, setAddingBook] = useState(false);
-  const [newBook, setNewBook] = useState({ title: "", author: "", review: "" });
+  const [newBook, setNewBook] = useState({ title: "", author: "", review: "", coverUrl: "" });
   const [bookSaving, setBookSaving] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   // connections
   const [likedUsers, setLikedUsers] = useState([]);
@@ -222,6 +225,37 @@ export default function ProfilePage() {
     );
   }
 
+  function handleBookTitleChange(e) {
+    const val = e.target.value;
+    setNewBook((prev) => ({ ...prev, title: val, coverUrl: "", author: "" }));
+    setSearchResults([]);
+    clearTimeout(searchTimer.current);
+    if (val.trim().length < 2) return;
+    searchTimer.current = setTimeout(() => searchRakuten(val.trim()), 600);
+  }
+
+  async function searchRakuten(title) {
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/rakuten?title=${encodeURIComponent(title)}`);
+      const data = await res.json();
+      setSearchResults(data.items || []);
+    } catch {
+      setSearchResults([]);
+    }
+    setSearching(false);
+  }
+
+  function applySearchResult(item) {
+    setNewBook((prev) => ({
+      ...prev,
+      title: item.title,
+      author: item.author || "",
+      coverUrl: item.coverUrl || "",
+    }));
+    setSearchResults([]);
+  }
+
   async function handleAddBook() {
     if (!newBook.title.trim() || bookSaving || bookshelf.length >= 10) return;
     setBookSaving(true);
@@ -229,10 +263,12 @@ export default function ProfilePage() {
       title: newBook.title.trim(),
       author: newBook.author.trim(),
       review: newBook.review.trim(),
+      coverUrl: newBook.coverUrl || null,
       order: bookshelf.length,
       createdAt: serverTimestamp(),
     });
-    setNewBook({ title: "", author: "", review: "" });
+    setNewBook({ title: "", author: "", review: "", coverUrl: "" });
+    setSearchResults([]);
     setAddingBook(false);
     setBookSaving(false);
     await fetchBookshelf();
@@ -389,6 +425,30 @@ export default function ProfilePage() {
           cursor:pointer; font-family:'Noto Sans JP',sans-serif;
         }
         .p-shelf-limit { font-size:12px; color:var(--muted); margin-top:12px; }
+
+        /* search dropdown */
+        .p-search-wrap { position:relative; }
+        .p-search-results {
+          position:absolute; top:100%; left:0; right:0; z-index:20;
+          background:white; border:1px solid var(--text); border-top:none;
+          max-height:260px; overflow-y:auto;
+        }
+        .p-search-item {
+          display:flex; gap:10px; align-items:center;
+          padding:10px 12px; cursor:pointer; border-bottom:1px solid var(--line);
+          transition:background 0.15s;
+        }
+        .p-search-item:last-child { border-bottom:none; }
+        .p-search-item:hover { background:var(--bg2); }
+        .p-search-cover { width:32px; height:44px; object-fit:cover; flex-shrink:0; }
+        .p-search-cover-empty { width:32px; height:44px; background:var(--bg3); flex-shrink:0; }
+        .p-search-item-title { font-size:13px; font-weight:500; color:var(--text); line-height:1.4; }
+        .p-search-item-author { font-size:11px; color:var(--muted); margin-top:2px; }
+        .p-search-note { padding:10px 12px; font-size:12px; color:var(--muted); }
+        .p-shelf-preview { width:48px; height:64px; object-fit:cover; margin-top:8px; border:1px solid var(--line); }
+        .p-shelf-item-cover { width:48px; height:64px; object-fit:cover; flex-shrink:0; border:1px solid var(--line); }
+        .p-shelf-item-cover-empty { width:48px; height:64px; background:var(--bg3); flex-shrink:0; }
+        .p-shelf-item-inner { display:flex; gap:14px; align-items:flex-start; }
 
         /* ---- connections ---- */
         .p-conn-section { margin-bottom:40px; }
@@ -564,6 +624,12 @@ export default function ProfilePage() {
                   <div className="p-shelf">
                     {bookshelf.map((book) => (
                       <div key={book.id} className="p-shelf-item">
+                        <div className="p-shelf-item-inner">
+                          {book.coverUrl
+                            ? <img src={book.coverUrl} alt={book.title} className="p-shelf-item-cover" />
+                            : <div className="p-shelf-item-cover-empty" />
+                          }
+                          <div style={{flex:1,minWidth:0}}>
                         <div className="p-shelf-meta">
                           <div>
                             <div className="p-shelf-title">{book.title}</div>
@@ -607,6 +673,8 @@ export default function ProfilePage() {
                             批評コメントを追加
                           </div>
                         )}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -621,13 +689,36 @@ export default function ProfilePage() {
                     </button>
                   ) : (
                     <div className="p-shelf-form">
-                      <input
-                        className="p-input"
-                        placeholder="書名（必須）"
-                        value={newBook.title}
-                        onChange={(e) => setNewBook({ ...newBook, title: e.target.value })}
-                        autoFocus
-                      />
+                      <div className="p-search-wrap">
+                        <input
+                          className="p-input"
+                          placeholder="書名を入力して検索（必須）"
+                          value={newBook.title}
+                          onChange={handleBookTitleChange}
+                          autoFocus
+                          autoComplete="off"
+                        />
+                        {(searchResults.length > 0 || searching) && (
+                          <div className="p-search-results">
+                            {searching && <div className="p-search-note">検索中...</div>}
+                            {searchResults.map((item, i) => (
+                              <div key={i} className="p-search-item" onClick={() => applySearchResult(item)}>
+                                {item.coverUrl
+                                  ? <img src={item.coverUrl} alt={item.title} className="p-search-cover" />
+                                  : <div className="p-search-cover-empty" />
+                                }
+                                <div>
+                                  <div className="p-search-item-title">{item.title}</div>
+                                  {item.author && <div className="p-search-item-author">{item.author}</div>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {newBook.coverUrl && (
+                        <img src={newBook.coverUrl} alt="cover" className="p-shelf-preview" />
+                      )}
                       <input
                         className="p-input"
                         placeholder="著者名"
@@ -650,7 +741,7 @@ export default function ProfilePage() {
                         >
                           {bookSaving ? "保存中" : "追加"}
                         </button>
-                        <button className="p-form-cancel" onClick={() => { setAddingBook(false); setNewBook({ title: "", author: "", review: "" }); }}>
+                        <button className="p-form-cancel" onClick={() => { setAddingBook(false); setNewBook({ title: "", author: "", review: "", coverUrl: "" }); setSearchResults([]); }}>
                           キャンセル
                         </button>
                       </div>
