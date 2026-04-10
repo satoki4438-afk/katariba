@@ -146,14 +146,11 @@ export default function ProfilePage() {
       const myBmSet = new Set(myBmSnap.docs.map((d) => d.id));
       setMyBookmarks(myBmSet);
 
-      // ブックマークされてる人
-      const allBmSnap = await getDocs(collection(db, "bookmarks"));
+      // ブックマークされてる人（users/{uid}/bookmarkedBy サブコレクション）
+      const bmBySnap = await getDocs(collection(db, "users", user.uid, "bookmarkedBy"));
       const bmByList = [];
-      await Promise.all(allBmSnap.docs.map(async (fromDoc) => {
+      await Promise.all(bmBySnap.docs.map(async (fromDoc) => {
         const fromUid = fromDoc.id;
-        if (fromUid === user.uid) return;
-        const tSnap = await getDoc(doc(db, "bookmarks", fromUid, "targets", user.uid));
-        if (!tSnap.exists()) return;
         const isMutual = myBmSet.has(fromUid);
         let displayName = null;
         if (userData?.isPremium || isMutual) {
