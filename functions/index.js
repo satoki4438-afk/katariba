@@ -119,8 +119,8 @@ async function runWeeklyScheduler() {
       author: topRequest.author || "",
       status: "reading",
       week: newWeekNum,
-      coverUrl: null,
-      amazonUrl: null,
+      coverUrl: topRequest.coverUrl || null,
+      rakutenUrl: topRequest.rakutenUrl || null,
       source: "request",
       createdAt: now,
     });
