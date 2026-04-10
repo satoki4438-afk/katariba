@@ -1,27 +1,36 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import {
   collection, query, orderBy, getDocs, addDoc,
-  serverTimestamp, doc, updateDoc, increment, getDoc
+  serverTimestamp, doc, updateDoc, increment,
 } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
 export default function RequestPage() {
   const { user, userData } = useAuth();
   const router = useRouter();
+  const searchTimer = useRef(null);
+
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
+
+  const [form, setForm] = useState({ title: "", author: "", coverUrl: "", rakutenUrl: "" });
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (user === null) router.push("/login");
   }, [user, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchRequests();
+  }, [user]);
 
   async function fetchRequests() {
     const q = query(collection(db, "requests"), orderBy("count", "desc"));
@@ -30,27 +39,55 @@ export default function RequestPage() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    if (!user) return;
-    fetchRequests();
-  }, [user]);
+  function handleTitleChange(e) {
+    const val = e.target.value;
+    setForm((prev) => ({ ...prev, title: val, author: "", coverUrl: "", rakutenUrl: "" }));
+    setSearchResults([]);
+    clearTimeout(searchTimer.current);
+    if (val.trim().length < 2) return;
+    searchTimer.current = setTimeout(() => searchRakuten(val.trim()), 600);
+  }
+
+  async function searchRakuten(title) {
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/rakuten?title=${encodeURIComponent(title)}`);
+      const data = await res.json();
+      setSearchResults(data.items || []);
+    } catch {
+      setSearchResults([]);
+    }
+    setSearching(false);
+  }
+
+  function applyResult(item) {
+    setForm({
+      title: item.title,
+      author: item.author || "",
+      coverUrl: item.coverUrl || "",
+      rakutenUrl: item.rakutenUrl || "",
+    });
+    setSearchResults([]);
+  }
 
   async function handleSubmit() {
-    if (!title.trim()) { setError("タイトルを入力してください"); return; }
+    if (!form.title.trim()) { setError("タイトルを入力してください"); return; }
     if (!userData?.isPremium) { setError("リクエスト投稿はプレミアム会員限定です"); return; }
     setPosting(true);
     setError("");
 
     const existing = requests.find(
-      (r) => r.title.trim() === title.trim() && r.author.trim() === author.trim()
+      (r) => r.title.trim() === form.title.trim()
     );
 
     if (existing) {
       await updateDoc(doc(db, "requests", existing.id), { count: increment(1) });
     } else {
       await addDoc(collection(db, "requests"), {
-        title: title.trim(),
-        author: author.trim(),
+        title: form.title.trim(),
+        author: form.author.trim(),
+        coverUrl: form.coverUrl || null,
+        rakutenUrl: form.rakutenUrl || null,
         userId: user.uid,
         count: 1,
         used: false,
@@ -58,15 +95,15 @@ export default function RequestPage() {
       });
     }
 
-    setTitle("");
-    setAuthor("");
+    setForm({ title: "", author: "", coverUrl: "", rakutenUrl: "" });
+    setSearchResults([]);
     setPosting(false);
     fetchRequests();
   }
 
-  async function handleVote(requestId) {
+  async function handleVote(r) {
     if (!user) return;
-    await updateDoc(doc(db, "requests", requestId), { count: increment(1) });
+    await updateDoc(doc(db, "requests", r.id), { count: increment(1) });
     fetchRequests();
   }
 
@@ -75,120 +112,170 @@ export default function RequestPage() {
   return (
     <>
       <style>{`
-        .request-wrap { max-width:800px; margin:0 auto; padding:60px 40px; }
-        @media(max-width:768px){ .request-wrap { padding:40px 20px; } }
-        .request-heading { font-size:clamp(24px,3vw,36px); font-weight:900; color:var(--text); letter-spacing:-1px; margin-bottom:8px; }
-        .request-sub { font-size:13px; color:var(--muted); margin-bottom:48px; line-height:1.9; }
+        .req-wrap { max-width:800px; margin:0 auto; padding:60px 40px; }
+        @media(max-width:768px){ .req-wrap { padding:40px 16px; } }
+        .req-heading { font-size:clamp(24px,3vw,36px); font-weight:900; color:var(--text); letter-spacing:-1px; margin-bottom:8px; }
+        .req-sub { font-size:13px; color:var(--muted); margin-bottom:48px; line-height:1.9; }
 
-        .request-form {
-          background:var(--bg2); border:1px solid var(--line); padding:32px 28px; margin-bottom:48px;
-        }
-        .form-label { font-size:11px; font-weight:500; letter-spacing:2px; color:var(--muted); margin-bottom:8px; display:block; }
-        .form-input {
+        .req-form { background:var(--bg2); border:1px solid var(--line); padding:32px 28px; margin-bottom:48px; }
+        .req-form-label { font-size:11px; font-weight:500; letter-spacing:2px; color:var(--muted); margin-bottom:8px; display:block; }
+
+        .req-search-wrap { position:relative; margin-bottom:16px; }
+        .req-input {
           width:100%; border:1px solid var(--line); padding:12px 16px;
           font-size:14px; font-family:'Noto Sans JP',sans-serif; color:var(--text);
-          background:white; outline:none; margin-bottom:16px;
+          background:white; outline:none; box-sizing:border-box;
         }
-        .form-input:focus { border-color:var(--text); }
-        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        @media(max-width:600px){ .form-row { grid-template-columns:1fr; } }
-        .submit-btn {
+        .req-input:focus { border-color:var(--text); }
+        .req-input:disabled { background:var(--bg3); color:var(--muted); }
+
+        .req-search-results {
+          position:absolute; top:100%; left:0; right:0; z-index:20;
+          background:white; border:1px solid var(--text); border-top:none;
+          max-height:280px; overflow-y:auto;
+        }
+        .req-search-item {
+          display:flex; gap:12px; align-items:center;
+          padding:12px 14px; cursor:pointer; border-bottom:1px solid var(--line);
+          transition:background 0.15s;
+        }
+        .req-search-item:last-child { border-bottom:none; }
+        .req-search-item:hover { background:var(--bg2); }
+        .req-search-cover { width:36px; height:48px; object-fit:cover; flex-shrink:0; }
+        .req-search-cover-empty { width:36px; height:48px; background:var(--bg3); flex-shrink:0; }
+        .req-search-title { font-size:13px; font-weight:500; color:var(--text); line-height:1.4; }
+        .req-search-author { font-size:11px; color:var(--muted); margin-top:2px; }
+        .req-search-note { padding:12px 14px; font-size:12px; color:var(--muted); }
+
+        .req-preview { display:flex; gap:16px; align-items:center; margin-bottom:16px; }
+        .req-preview-cover { width:52px; height:70px; object-fit:cover; border:1px solid var(--line); flex-shrink:0; }
+        .req-preview-title { font-size:14px; font-weight:700; color:var(--text); }
+        .req-preview-author { font-size:12px; color:var(--muted); margin-top:3px; }
+
+        .req-submit {
           background:var(--text); color:white; border:none; padding:13px 32px;
           font-size:13px; font-weight:500; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
           transition:opacity 0.2s; letter-spacing:0.5px;
         }
-        .submit-btn:hover { opacity:0.75; }
-        .submit-btn:disabled { opacity:0.4; cursor:not-allowed; }
-        .form-error { font-size:12px; color:var(--red); margin-top:8px; }
-        .premium-gate-form {
+        .req-submit:hover { opacity:0.75; }
+        .req-submit:disabled { opacity:0.4; cursor:not-allowed; }
+        .req-error { font-size:12px; color:var(--red); margin-top:8px; }
+        .req-gate {
           background:white; border:1px solid var(--line); padding:16px 20px;
           font-size:13px; color:var(--muted); line-height:1.8; margin-top:16px;
         }
-        .premium-gate-form a { color:var(--text); font-weight:500; }
+        .req-gate a { color:var(--text); font-weight:500; }
 
-        .section-label { font-size:11px; font-weight:500; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:20px; }
-        .request-list { display:flex; flex-direction:column; gap:2px; background:var(--line); }
-        .request-row {
-          background:white; padding:20px 24px;
-          display:flex; align-items:center; justify-content:space-between; gap:16px;
+        .req-list-label { font-size:11px; font-weight:500; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:20px; }
+        .req-list { display:flex; flex-direction:column; gap:2px; background:var(--line); }
+        .req-row {
+          background:white; padding:18px 24px;
+          display:flex; align-items:center; gap:16px;
         }
-        .request-info { flex:1; min-width:0; }
-        .request-title { font-size:15px; font-weight:700; color:var(--text); margin-bottom:3px; }
-        .request-author { font-size:12px; color:var(--muted); }
-        .vote-btn {
+        .req-row-cover { width:40px; height:54px; object-fit:cover; flex-shrink:0; border:1px solid var(--line); }
+        .req-row-cover-empty { width:40px; height:54px; background:var(--bg3); flex-shrink:0; }
+        .req-row-info { flex:1; min-width:0; }
+        .req-row-title { font-size:15px; font-weight:700; color:var(--text); margin-bottom:3px; }
+        .req-row-author { font-size:12px; color:var(--muted); }
+        .req-used { font-size:10px; color:var(--muted); background:var(--bg3); padding:2px 8px; margin-left:8px; }
+        .req-vote {
           display:flex; flex-direction:column; align-items:center; gap:2px;
           background:none; border:1px solid var(--line); padding:8px 16px;
           cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:all 0.2s; flex-shrink:0;
         }
-        .vote-btn:hover { border-color:var(--text); }
-        .vote-count { font-family:'DM Sans',sans-serif; font-size:20px; font-weight:700; color:var(--text); }
-        .vote-label { font-size:10px; color:var(--muted); letter-spacing:1px; }
-        .used-badge { font-size:10px; color:var(--muted); background:var(--bg3); padding:2px 8px; }
+        .req-vote:hover:not(:disabled) { border-color:var(--text); }
+        .req-vote:disabled { cursor:default; opacity:0.5; }
+        .req-vote-count { font-family:'DM Sans',sans-serif; font-size:20px; font-weight:700; color:var(--text); }
+        .req-vote-label { font-size:10px; color:var(--muted); letter-spacing:1px; }
       `}</style>
 
       <AppNav />
 
-      <div className="request-wrap">
-        <h1 className="request-heading">リクエスト</h1>
-        <p className="request-sub">
+      <div className="req-wrap">
+        <h1 className="req-heading">リクエスト</h1>
+        <p className="req-sub">
           読みたい本をリクエストしてください。投票数1位の本が毎週自動で選ばれます。<br />
           同じ本へのリクエストは「+1」として集計されます。
         </p>
 
-        <div className="request-form">
-          <div className="form-row">
-            <div>
-              <label className="form-label">タイトル</label>
-              <input
-                className="form-input"
-                placeholder="本のタイトル"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={!userData?.isPremium}
-              />
-            </div>
-            <div>
-              <label className="form-label">著者名</label>
-              <input
-                className="form-input"
-                placeholder="著者名（任意）"
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-                disabled={!userData?.isPremium}
-              />
-            </div>
+        <div className="req-form">
+          <label className="req-form-label">本を検索して選択</label>
+          <div className="req-search-wrap">
+            <input
+              className="req-input"
+              placeholder="タイトルを入力して検索..."
+              value={form.title}
+              onChange={handleTitleChange}
+              disabled={!userData?.isPremium}
+              autoComplete="off"
+            />
+            {(searchResults.length > 0 || searching) && (
+              <div className="req-search-results">
+                {searching && <div className="req-search-note">検索中...</div>}
+                {searchResults.map((item, i) => (
+                  <div key={i} className="req-search-item" onClick={() => applyResult(item)}>
+                    {item.coverUrl
+                      ? <img src={item.coverUrl} alt={item.title} className="req-search-cover" />
+                      : <div className="req-search-cover-empty" />
+                    }
+                    <div>
+                      <div className="req-search-title">{item.title}</div>
+                      {item.author && <div className="req-search-author">{item.author}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <button className="submit-btn" onClick={handleSubmit} disabled={posting || !userData?.isPremium}>
+
+          {form.title && !searching && searchResults.length === 0 && (
+            <div className="req-preview">
+              {form.coverUrl
+                ? <img src={form.coverUrl} alt={form.title} className="req-preview-cover" />
+                : <div style={{width:52,height:70,background:"var(--bg3)",flexShrink:0}} />
+              }
+              <div>
+                <div className="req-preview-title">{form.title}</div>
+                {form.author && <div className="req-preview-author">{form.author}</div>}
+              </div>
+            </div>
+          )}
+
+          <button className="req-submit" onClick={handleSubmit} disabled={posting || !userData?.isPremium || !form.title.trim()}>
             {posting ? "送信中..." : "リクエストする"}
           </button>
-          {error && <p className="form-error">{error}</p>}
+          {error && <p className="req-error">{error}</p>}
           {!userData?.isPremium && (
-            <div className="premium-gate-form">
+            <div className="req-gate">
               リクエスト投稿は<a href="/premium">プレミアム会員</a>限定です。投票（+1）は全会員が可能です。
             </div>
           )}
         </div>
 
-        <div className="section-label">投票ランキング</div>
+        <div className="req-list-label">投票ランキング</div>
 
         {loading ? (
           <p style={{fontSize:"13px",color:"var(--muted)",letterSpacing:"2px"}}>読み込み中</p>
         ) : requests.length === 0 ? (
           <p style={{fontSize:"13px",color:"var(--muted)"}}>まだリクエストはありません。</p>
         ) : (
-          <div className="request-list">
+          <div className="req-list">
             {requests.map((r) => (
-              <div key={r.id} className="request-row">
-                <div className="request-info">
-                  <div className="request-title">
+              <div key={r.id} className="req-row">
+                {r.coverUrl
+                  ? <img src={r.coverUrl} alt={r.title} className="req-row-cover" />
+                  : <div className="req-row-cover-empty" />
+                }
+                <div className="req-row-info">
+                  <div className="req-row-title">
                     {r.title}
-                    {r.used && <span className="used-badge" style={{marginLeft:8}}>選出済み</span>}
+                    {r.used && <span className="req-used">選出済み</span>}
                   </div>
-                  {r.author && <div className="request-author">{r.author}</div>}
+                  {r.author && <div className="req-row-author">{r.author}</div>}
                 </div>
-                <button className="vote-btn" onClick={() => handleVote(r.id)} disabled={r.used}>
-                  <span className="vote-count">{r.count}</span>
-                  <span className="vote-label">VOTE</span>
+                <button className="req-vote" onClick={() => handleVote(r)} disabled={!!r.used}>
+                  <span className="req-vote-count">{r.count}</span>
+                  <span className="req-vote-label">VOTE</span>
                 </button>
               </div>
             ))}
