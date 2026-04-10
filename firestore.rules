@@ -6,20 +6,25 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuth() && (request.auth.token.email == "tas.studio2026@gmail.com" || request.auth.token.email == "satoki4438@gmail.com");
+    }
+
     function isPremium() {
       return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremium == true;
     }
 
     match /books/{bookId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
 
       match /comments/{commentId} {
-        allow read: if resource.data.visible == true
+        allow get: if resource.data.visible == true
           || (isAuth() && resource.data.userId == request.auth.uid);
+        allow list: if isAuth();
         allow create: if isAuth();
-        allow update: if isAuth() && resource.data.userId == request.auth.uid;
-        allow delete: if false;
+        allow update: if isAdmin() || (isAuth() && resource.data.userId == request.auth.uid);
+        allow delete: if isAdmin();
 
         match /replies/{replyId} {
           allow read: if true;
@@ -42,6 +47,19 @@ service cloud.firestore {
         allow read: if isAuth() && (request.auth.uid == fromUserId || request.auth.uid == toUserId);
         allow write: if isAuth() && request.auth.uid == fromUserId;
       }
+    }
+
+    match /bookmarks/{fromUserId} {
+      allow read: if isAuth() && request.auth.uid == fromUserId;
+      match /targets/{toUserId} {
+        allow read: if isAuth() && (request.auth.uid == fromUserId || request.auth.uid == toUserId);
+        allow write: if isAuth() && request.auth.uid == fromUserId;
+      }
+    }
+
+    match /users/{userId}/bookshelf/{itemId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && request.auth.uid == userId;
     }
 
     match /requests/{requestId} {
