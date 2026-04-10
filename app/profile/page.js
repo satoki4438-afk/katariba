@@ -44,7 +44,7 @@ export default function ProfilePage() {
   const [bookshelf, setBookshelf] = useState([]);
   const [bookshelfLoading, setBookshelfLoading] = useState(true);
   const [addingBook, setAddingBook] = useState(false);
-  const [newBook, setNewBook] = useState({ title: "", author: "", review: "", coverUrl: "" });
+  const [newBook, setNewBook] = useState({ title: "", author: "", review: "", coverUrl: "", rakutenUrl: "" });
   const [bookSaving, setBookSaving] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
@@ -252,6 +252,7 @@ export default function ProfilePage() {
       title: item.title,
       author: item.author || "",
       coverUrl: item.coverUrl || "",
+      rakutenUrl: item.rakutenUrl || "",
     }));
     setSearchResults([]);
   }
@@ -264,10 +265,11 @@ export default function ProfilePage() {
       author: newBook.author.trim(),
       review: newBook.review.trim(),
       coverUrl: newBook.coverUrl || null,
+      rakutenUrl: newBook.rakutenUrl || null,
       order: bookshelf.length,
       createdAt: serverTimestamp(),
     });
-    setNewBook({ title: "", author: "", review: "", coverUrl: "" });
+    setNewBook({ title: "", author: "", review: "", coverUrl: "", rakutenUrl: "" });
     setSearchResults([]);
     setAddingBook(false);
     setBookSaving(false);
@@ -625,14 +627,24 @@ export default function ProfilePage() {
                     {bookshelf.map((book) => (
                       <div key={book.id} className="p-shelf-item">
                         <div className="p-shelf-item-inner">
-                          {book.coverUrl
-                            ? <img src={book.coverUrl} alt={book.title} className="p-shelf-item-cover" />
-                            : <div className="p-shelf-item-cover-empty" />
+                          {book.rakutenUrl
+                            ? <a href={book.rakutenUrl} target="_blank" rel="noopener noreferrer" style={{flexShrink:0}}>
+                                {book.coverUrl
+                                  ? <img src={book.coverUrl} alt={book.title} className="p-shelf-item-cover" />
+                                  : <div className="p-shelf-item-cover-empty" />
+                                }
+                              </a>
+                            : book.coverUrl
+                              ? <img src={book.coverUrl} alt={book.title} className="p-shelf-item-cover" />
+                              : <div className="p-shelf-item-cover-empty" />
                           }
                           <div style={{flex:1,minWidth:0}}>
                         <div className="p-shelf-meta">
                           <div>
-                            <div className="p-shelf-title">{book.title}</div>
+                            {book.rakutenUrl
+                              ? <a href={book.rakutenUrl} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none"}}><div className="p-shelf-title">{book.title}</div></a>
+                              : <div className="p-shelf-title">{book.title}</div>
+                            }
                             {book.author && <div className="p-shelf-author">{book.author}</div>}
                           </div>
                           <button className="p-shelf-del" onClick={() => handleDeleteBook(book.id)}>
@@ -741,7 +753,7 @@ export default function ProfilePage() {
                         >
                           {bookSaving ? "保存中" : "追加"}
                         </button>
-                        <button className="p-form-cancel" onClick={() => { setAddingBook(false); setNewBook({ title: "", author: "", review: "", coverUrl: "" }); setSearchResults([]); }}>
+                        <button className="p-form-cancel" onClick={() => { setAddingBook(false); setNewBook({ title: "", author: "", review: "", coverUrl: "", rakutenUrl: "" }); setSearchResults([]); }}>
                           キャンセル
                         </button>
                       </div>
