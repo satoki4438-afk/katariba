@@ -16,11 +16,20 @@ async function getRecentBookTitles() {
 }
 
 // リクエスト投票数1位の作品を取得（半年縛り除外済み）
-async function getTopRequest(recentTitles) {
-  const snap = await db.collection("requests")
+// genre を指定するとそのジャンル内での1位を返す
+async function getTopRequest(recentTitles, genre) {
+  let q = db.collection("requests")
     .where("used", "==", false)
-    .orderBy("count", "desc")
-    .get();
+    .orderBy("count", "desc");
+
+  if (genre) {
+    q = db.collection("requests")
+      .where("used", "==", false)
+      .where("genre", "==", genre)
+      .orderBy("count", "desc");
+  }
+
+  const snap = await q.get();
 
   for (const doc of snap.docs) {
     const data = doc.data();

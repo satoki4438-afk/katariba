@@ -9,6 +9,10 @@ import {
 } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
+const GENRES = ["SF", "恋愛", "ミステリー", "ファンタジー", "ラノベ", "歴史", "エッセイ", "ホラー", "純文学", "ノンフィクション", "その他"];
+
+const EMPTY_FORM = { title: "", author: "", coverUrl: "", rakutenUrl: "", genre: "" };
+
 export default function RequestPage() {
   const { user, userData } = useAuth();
   const router = useRouter();
@@ -19,9 +23,11 @@ export default function RequestPage() {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState("");
 
-  const [form, setForm] = useState({ title: "", author: "", coverUrl: "", rakutenUrl: "" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+
+  const [activeGenre, setActiveGenre] = useState("すべて");
 
   useEffect(() => {
     if (user === null) router.push("/login");
@@ -61,24 +67,24 @@ export default function RequestPage() {
   }
 
   function applyResult(item) {
-    setForm({
+    setForm((prev) => ({
+      ...prev,
       title: item.title,
       author: item.author || "",
       coverUrl: item.coverUrl || "",
       rakutenUrl: item.rakutenUrl || "",
-    });
+    }));
     setSearchResults([]);
   }
 
   async function handleSubmit() {
     if (!form.title.trim()) { setError("タイトルを入力してください"); return; }
+    if (!form.genre) { setError("ジャンルを選択してください"); return; }
     if (!userData?.isPremium) { setError("リクエスト投稿はプレミアム会員限定です"); return; }
     setPosting(true);
     setError("");
 
-    const existing = requests.find(
-      (r) => r.title.trim() === form.title.trim()
-    );
+    const existing = requests.find((r) => r.title.trim() === form.title.trim());
 
     if (existing) {
       await updateDoc(doc(db, "requests", existing.id), { count: increment(1) });
@@ -86,6 +92,7 @@ export default function RequestPage() {
       await addDoc(collection(db, "requests"), {
         title: form.title.trim(),
         author: form.author.trim(),
+        genre: form.genre,
         coverUrl: form.coverUrl || null,
         rakutenUrl: form.rakutenUrl || null,
         userId: user.uid,
@@ -95,7 +102,7 @@ export default function RequestPage() {
       });
     }
 
-    setForm({ title: "", author: "", coverUrl: "", rakutenUrl: "" });
+    setForm(EMPTY_FORM);
     setSearchResults([]);
     setPosting(false);
     fetchRequests();
@@ -108,6 +115,10 @@ export default function RequestPage() {
   }
 
   if (user === undefined) return null;
+
+  const filtered = activeGenre === "すべて"
+    ? requests
+    : requests.filter((r) => r.genre === activeGenre);
 
   return (
     <>
@@ -152,6 +163,17 @@ export default function RequestPage() {
         .req-preview-title { font-size:14px; font-weight:700; color:var(--text); }
         .req-preview-author { font-size:12px; color:var(--muted); margin-top:3px; }
 
+        .req-genre-wrap { margin-bottom:20px; }
+        .req-genre-choices { display:flex; flex-wrap:wrap; gap:6px; }
+        .req-genre-btn {
+          font-size:12px; padding:6px 14px; background:white; color:var(--muted);
+          border:1px solid var(--line); cursor:pointer;
+          font-family:'Noto Sans JP',sans-serif; transition:all 0.15s;
+        }
+        .req-genre-btn:hover { border-color:var(--text); color:var(--text); }
+        .req-genre-btn.on { background:var(--text); color:white; border-color:var(--text); }
+        .req-genre-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
         .req-submit {
           background:var(--text); color:white; border:none; padding:13px 32px;
           font-size:13px; font-weight:500; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
@@ -166,7 +188,17 @@ export default function RequestPage() {
         }
         .req-gate a { color:var(--text); font-weight:500; }
 
-        .req-list-label { font-size:11px; font-weight:500; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:20px; }
+        .req-list-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:0; }
+        .req-list-label { font-size:11px; font-weight:500; letter-spacing:3px; color:var(--muted); text-transform:uppercase; }
+        .req-genre-tabs { display:flex; flex-wrap:wrap; gap:0; border-bottom:1px solid var(--line); margin-bottom:20px; margin-top:16px; }
+        .req-genre-tab {
+          font-size:12px; padding:8px 14px; background:none; border:none;
+          cursor:pointer; color:var(--muted); font-family:'Noto Sans JP',sans-serif;
+          border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.15s; white-space:nowrap;
+        }
+        .req-genre-tab:hover { color:var(--text); }
+        .req-genre-tab.active { color:var(--text); font-weight:700; border-bottom-color:var(--text); }
+
         .req-list { display:flex; flex-direction:column; gap:2px; background:var(--line); }
         .req-row {
           background:white; padding:18px 24px;
@@ -176,8 +208,10 @@ export default function RequestPage() {
         .req-row-cover-empty { width:40px; height:54px; background:var(--bg3); flex-shrink:0; }
         .req-row-info { flex:1; min-width:0; }
         .req-row-title { font-size:15px; font-weight:700; color:var(--text); margin-bottom:3px; }
+        .req-row-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
         .req-row-author { font-size:12px; color:var(--muted); }
-        .req-used { font-size:10px; color:var(--muted); background:var(--bg3); padding:2px 8px; margin-left:8px; }
+        .req-row-genre { font-size:10px; letter-spacing:1px; color:var(--muted); background:var(--bg3); padding:2px 8px; }
+        .req-used { font-size:10px; color:var(--muted); background:var(--bg3); padding:2px 8px; }
         .req-vote {
           display:flex; flex-direction:column; align-items:center; gap:2px;
           background:none; border:1px solid var(--line); padding:8px 16px;
@@ -241,6 +275,22 @@ export default function RequestPage() {
             </div>
           )}
 
+          <label className="req-form-label" style={{marginBottom:10}}>ジャンル</label>
+          <div className="req-genre-wrap">
+            <div className="req-genre-choices">
+              {GENRES.map((g) => (
+                <button
+                  key={g}
+                  className={`req-genre-btn${form.genre === g ? " on" : ""}`}
+                  onClick={() => setForm((prev) => ({ ...prev, genre: g }))}
+                  disabled={!userData?.isPremium}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button className="req-submit" onClick={handleSubmit} disabled={posting || !userData?.isPremium || !form.title.trim()}>
             {posting ? "送信中..." : "リクエストする"}
           </button>
@@ -253,14 +303,27 @@ export default function RequestPage() {
         </div>
 
         <div className="req-list-label">投票ランキング</div>
+        <div className="req-genre-tabs">
+          {["すべて", ...GENRES].map((g) => (
+            <button
+              key={g}
+              className={`req-genre-tab${activeGenre === g ? " active" : ""}`}
+              onClick={() => setActiveGenre(g)}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
 
         {loading ? (
           <p style={{fontSize:"13px",color:"var(--muted)",letterSpacing:"2px"}}>読み込み中</p>
-        ) : requests.length === 0 ? (
-          <p style={{fontSize:"13px",color:"var(--muted)"}}>まだリクエストはありません。</p>
+        ) : filtered.length === 0 ? (
+          <p style={{fontSize:"13px",color:"var(--muted)"}}>
+            {activeGenre === "すべて" ? "まだリクエストはありません。" : `${activeGenre}のリクエストはまだありません。`}
+          </p>
         ) : (
           <div className="req-list">
-            {requests.map((r) => (
+            {filtered.map((r) => (
               <div key={r.id} className="req-row">
                 {r.coverUrl
                   ? <img src={r.coverUrl} alt={r.title} className="req-row-cover" />
@@ -269,9 +332,12 @@ export default function RequestPage() {
                 <div className="req-row-info">
                   <div className="req-row-title">
                     {r.title}
-                    {r.used && <span className="req-used">選出済み</span>}
+                    {r.used && <span className="req-used" style={{marginLeft:8}}>選出済み</span>}
                   </div>
-                  {r.author && <div className="req-row-author">{r.author}</div>}
+                  <div className="req-row-meta">
+                    {r.author && <span className="req-row-author">{r.author}</span>}
+                    {r.genre && <span className="req-row-genre">{r.genre}</span>}
+                  </div>
                 </div>
                 <button className="req-vote" onClick={() => handleVote(r)} disabled={!!r.used}>
                   <span className="req-vote-count">{r.count}</span>
