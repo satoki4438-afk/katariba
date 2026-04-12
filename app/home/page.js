@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { auth, db } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { db } from "@/lib/firebase";
 import { collection, query, orderBy, getDocs, getCountFromServer } from "firebase/firestore";
+import AppNav from "@/components/AppNav";
 
 function daysUntilNextSaturday() {
   const now = new Date();
@@ -42,11 +42,6 @@ export default function HomePage() {
     fetchBooks();
   }, [user]);
 
-  async function handleSignOut() {
-    await signOut(auth);
-    router.push("/");
-  }
-
   if (user === undefined) return null;
 
   const genres = ["すべて", ...Array.from(new Set(books.map((b) => b.genre).filter(Boolean)))];
@@ -55,24 +50,6 @@ export default function HomePage() {
   return (
     <>
       <style>{`
-        .home-nav {
-          position:sticky; top:0; z-index:100;
-          padding:16px 40px; display:flex; justify-content:space-between; align-items:center;
-          background:rgba(255,255,255,0.96); backdrop-filter:blur(10px);
-          border-bottom:1px solid var(--line);
-        }
-        @media(max-width:768px){ .home-nav { padding:14px 20px; } }
-        .home-logo { font-family:'DM Sans',sans-serif; font-size:18px; font-weight:900; color:var(--text); text-decoration:none; }
-        .home-nav-right { display:flex; align-items:center; gap:24px; }
-        .nav-text-btn { font-size:13px; color:var(--muted); background:none; border:none; cursor:pointer; font-family:'Noto Sans JP',sans-serif; transition:color 0.2s; text-decoration:none; }
-        .nav-text-btn:hover { color:var(--text); }
-        .nav-solid-btn { font-size:12px; font-weight:500; color:white; background:var(--text); border:none; padding:8px 20px; cursor:pointer; font-family:'Noto Sans JP',sans-serif; text-decoration:none; transition:opacity 0.2s; letter-spacing:0.5px; }
-        .nav-solid-btn:hover { opacity:0.75; }
-        @media(max-width:600px){
-          .home-nav-right { gap:14px; }
-          .nav-hide-sp { display:none; }
-        }
-
         .home-wrap { max-width:1100px; margin:0 auto; padding:60px 40px; }
         @media(max-width:768px){ .home-wrap { padding:32px 16px; } }
 
@@ -121,18 +98,7 @@ export default function HomePage() {
         .loading-state { text-align:center; padding:80px 20px; color:var(--muted); font-size:13px; letter-spacing:2px; }
       `}</style>
 
-      <nav className="home-nav">
-        <Link href="/home" className="home-logo">カタリバ</Link>
-        <div className="home-nav-right">
-          <Link href="/request" className="nav-text-btn nav-hide-sp">リクエスト</Link>
-          <Link href="/ranking" className="nav-text-btn nav-hide-sp">ランキング</Link>
-          <Link href="/profile" className="nav-text-btn">プロフィール</Link>
-          {!userData?.isPremium && (
-            <Link href="/premium" className="nav-solid-btn">プレミアム</Link>
-          )}
-          <button className="nav-text-btn" onClick={handleSignOut}>ログアウト</button>
-        </div>
-      </nav>
+      <AppNav />
 
       <div className="home-wrap">
         <div className="home-header">
