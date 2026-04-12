@@ -44,8 +44,9 @@ export default function HomePage() {
 
   if (user === undefined) return null;
 
-  const genres = ["すべて", ...Array.from(new Set(books.map((b) => b.genre).filter(Boolean)))];
-  const filtered = activeGenre === "すべて" ? books : books.filter((b) => b.genre === activeGenre);
+  const activeBooks = books.filter((b) => b.status !== "closed");
+  const genres = ["すべて", ...Array.from(new Set(activeBooks.map((b) => b.genre).filter(Boolean)))];
+  const filtered = activeGenre === "すべて" ? activeBooks : activeBooks.filter((b) => b.genre === activeGenre);
 
   return (
     <>
@@ -53,9 +54,11 @@ export default function HomePage() {
         .home-wrap { max-width:1100px; margin:0 auto; padding:60px 40px; }
         @media(max-width:768px){ .home-wrap { padding:32px 16px; } }
 
-        .home-header { margin-bottom:24px; }
+        .home-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }
         .home-title { font-size:clamp(22px,3vw,36px); font-weight:900; color:var(--text); letter-spacing:-1px; margin-bottom:8px; }
         .home-sub { font-size:13px; color:var(--muted); }
+        .home-archive-link { font-size:13px; color:var(--muted); text-decoration:none; white-space:nowrap; transition:color 0.2s; padding-top:8px; }
+        .home-archive-link:hover { color:var(--text); }
 
         .genre-tabs { display:flex; gap:0; flex-wrap:wrap; margin-bottom:24px; border-bottom:1px solid var(--line); }
         .genre-tab { font-size:12px; padding:8px 16px; background:none; border:none; cursor:pointer; color:var(--muted); font-family:'Noto Sans JP',sans-serif; border-bottom:2px solid transparent; transition:all 0.15s; white-space:nowrap; }
@@ -102,8 +105,11 @@ export default function HomePage() {
 
       <div className="home-wrap">
         <div className="home-header">
-          <h1 className="home-title">討論中の本</h1>
-          <p className="home-sub">常時8〜10冊が並走。いつ来ても必ず参加できる本がある。</p>
+          <div>
+            <h1 className="home-title">討論中の本</h1>
+            <p className="home-sub">常時8〜10冊が並走。いつ来ても必ず参加できる本がある。</p>
+          </div>
+          <Link href="/archive" className="home-archive-link">過去ログ →</Link>
         </div>
 
         {!loading && genres.length > 1 && (

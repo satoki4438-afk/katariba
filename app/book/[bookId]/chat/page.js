@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import {
-  doc, getDoc, collection, query, orderBy, onSnapshot,
+  doc, getDoc, setDoc, collection, query, orderBy, onSnapshot,
   addDoc, updateDoc, increment, serverTimestamp, getDocs
 } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
@@ -42,9 +42,23 @@ export default function ChatPage() {
     if (!user || !bookId) return;
     getDoc(doc(db, "books", bookId)).then((snap) => {
       if (!snap.exists()) { router.push("/home"); return; }
+      if (snap.data().status === "closed") { router.push(`/archive/${bookId}`); return; }
       setBook({ id: snap.id, ...snap.data() });
     });
   }, [user, bookId, router]);
+
+  useEffect(() => {
+    if (!user || !bookId) return;
+    async function loadLiked() {
+      const snap = await getDocs(collection(db, "likes", user.uid, "targets"));
+      const likedIds = {};
+      snap.docs.forEach((d) => {
+        (d.data().commentIds || []).forEach((cid) => { likedIds[cid] = true; });
+      });
+      setLiked(likedIds);
+    }
+    loadLiked();
+  }, [user, bookId]);
 
   useEffect(() => {
     if (!user || !bookId) return;
@@ -80,10 +94,14 @@ export default function ChatPage() {
     const likeRef = doc(db, "likes", user.uid, "targets", comment.userId);
     const snap = await getDoc(likeRef);
     if (snap.exists()) {
-      await updateDoc(likeRef, { count: increment(1), bookIds: [...(snap.data().bookIds || []), bookId] });
+      const existing = snap.data();
+      await updateDoc(likeRef, {
+        count: increment(1),
+        bookIds: [...(existing.bookIds || []), bookId],
+        commentIds: [...(existing.commentIds || []), comment.id],
+      });
     } else {
-      const { setDoc } = await import("firebase/firestore");
-      await setDoc(likeRef, { count: 1, bookIds: [bookId] });
+      await setDoc(likeRef, { count: 1, bookIds: [bookId], commentIds: [comment.id] });
     }
   }
 
