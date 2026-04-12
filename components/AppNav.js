@@ -127,6 +127,7 @@ export default function AppNav() {
         <div className="app-nav-links">
           <Link href="/request" className="app-nav-link">リクエスト</Link>
           <Link href="/ranking" className="app-nav-link">ランキング</Link>
+          <Link href="/archive" className="app-nav-link">アーカイブ</Link>
           <Link href="/profile" className="app-nav-link">プロフィール</Link>
           {!userData?.isPremium && (
             <Link href="/premium" className="app-nav-premium">プレミアム</Link>
@@ -155,6 +156,7 @@ export default function AppNav() {
           <Link href="/home" className="app-mobile-link" onClick={close}>ホーム</Link>
           <Link href="/request" className="app-mobile-link" onClick={close}>リクエスト</Link>
           <Link href="/ranking" className="app-mobile-link" onClick={close}>ランキング</Link>
+          <Link href="/archive" className="app-mobile-link" onClick={close}>アーカイブ</Link>
           <Link href="/profile" className="app-mobile-link" onClick={close}>プロフィール</Link>
           <button className="app-mobile-link" onClick={() => { close(); handleSignOut(); }}>ログアウト</button>
         </div>
