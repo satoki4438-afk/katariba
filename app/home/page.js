@@ -107,7 +107,7 @@ export default function HomePage() {
         <div className="home-header">
           <div>
             <h1 className="home-title">討論中の本</h1>
-            <p className="home-sub">常時8〜10冊が並走。いつ来ても必ず参加できる本がある。</p>
+            <p className="home-sub">読む。書く。討論する。</p>
           </div>
           <Link href="/archive" className="home-archive-link">過去ログ →</Link>
         </div>
