@@ -20,11 +20,7 @@ export default function ArchiveBookPage() {
   const [replies, setReplies] = useState({});
 
   useEffect(() => {
-    if (user === null) router.push("/login");
-  }, [user, router]);
-
-  useEffect(() => {
-    if (!user || !bookId) return;
+    if (user === undefined || !bookId) return;
     async function fetch() {
       const bookSnap = await getDoc(doc(db, "books", bookId));
       if (!bookSnap.exists()) { router.push("/archive"); return; }
@@ -60,7 +56,7 @@ export default function ArchiveBookPage() {
     });
   }
 
-  if (user === undefined || loading) return null;
+  if (loading) return null;
 
   const isPremium = userData?.isPremium;
   const visibleComments = isPremium ? comments : comments.slice(0, FREE_LIMIT);

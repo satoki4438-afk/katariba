@@ -235,6 +235,9 @@ export default function ChatPage() {
 
         .back-link-chat { font-size:13px; color:var(--muted); text-decoration:none; }
         .back-link-chat:hover { color:var(--text); }
+        .rakuten-link-chat { font-size:12px; color:var(--blue); text-decoration:none; white-space:nowrap; }
+        .rakuten-link-chat:hover { text-decoration:underline; }
+        @media(max-width:640px){ .rakuten-link-chat { display:none; } }
       `}</style>
 
       <div className="chat-layout">
@@ -246,6 +249,11 @@ export default function ChatPage() {
             <div className="chat-book-author">{book.author}</div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:16}}>
+            {book.rakutenUrl && (
+              <a href={book.rakutenUrl} target="_blank" rel="noopener noreferrer" className="rakuten-link-chat">
+                この本を読む →
+              </a>
+            )}
             <span className={`chat-status ${
               book.status === "reading" ? "status-reading" :
               book.status === "open" ? "status-open" : "status-closed"

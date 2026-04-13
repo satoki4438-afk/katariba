@@ -21,7 +21,8 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow get: if resource.data.visible == true
           || (isAuth() && resource.data.userId == request.auth.uid);
-        allow list: if isAuth();
+        allow list: if isAuth()
+          || get(/databases/$(database)/documents/books/$(bookId)).data.status == "closed";
         allow create: if isAuth();
         allow update: if isAdmin() || (isAuth() && resource.data.userId == request.auth.uid);
         allow delete: if isAdmin();

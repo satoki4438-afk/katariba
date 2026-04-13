@@ -14,11 +14,7 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user === null) router.push("/login");
-  }, [user, router]);
-
-  useEffect(() => {
-    if (!user) return;
+    if (user === undefined) return;
     async function fetch() {
       const q = query(
         collection(db, "books"),
@@ -39,7 +35,7 @@ export default function ArchivePage() {
     fetch();
   }, [user]);
 
-  if (user === undefined) return null;
+  if (user === undefined) return null; // auth確認中のみnull
 
   return (
     <>
