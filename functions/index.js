@@ -6,6 +6,18 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 const db = admin.firestore();
 
+function generateSlug(title, date) {
+  const d = date?.toDate ? date.toDate() : (date instanceof Date ? date : new Date());
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const sanitized = title
+    .replace(/[　\s]+/g, "-")
+    .replace(/[『』「」【】（）()。、・…！？!?〜～―—\/\\|]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "");
+  return `${sanitized}-${yyyy}-${mm}`;
+}
+
 // 半年縛りチェック用：過去6ヶ月以内に登場した本のタイトル一覧を取得
 async function getRecentBookTitles() {
   const sixMonthsAgo = new Date();
@@ -115,6 +127,7 @@ async function runWeeklyScheduler() {
       coverUrl: bestseller.coverUrl || null,
       amazonUrl: bestseller.amazonUrl || null,
       source: "bestseller",
+      slug: generateSlug(bestseller.title, now),
       createdAt: now,
     });
     addedBooks.push(ref.id);
@@ -132,6 +145,7 @@ async function runWeeklyScheduler() {
       coverUrl: topRequest.coverUrl || null,
       rakutenUrl: topRequest.rakutenUrl || null,
       source: "request",
+      slug: generateSlug(topRequest.title, now),
       createdAt: now,
     });
     addedBooks.push(ref.id);

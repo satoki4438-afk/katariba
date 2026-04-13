@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import {
-  doc, getDoc, setDoc, collection, query, orderBy, onSnapshot,
+  doc, getDoc, setDoc, collection, query, orderBy, where, limit, onSnapshot,
   addDoc, updateDoc, increment, serverTimestamp, getDocs
 } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
@@ -23,8 +23,9 @@ function hashAnonymousId(userId, bookId) {
 export default function ChatPage() {
   const { user, userData } = useAuth();
   const router = useRouter();
-  const { bookId } = useParams();
+  const { slug } = useParams();
   const [book, setBook] = useState(null);
+  const [bookId, setBookId] = useState(null);
   const [comments, setComments] = useState([]);
   const [text, setText] = useState("");
   const [posting, setPosting] = useState(false);
@@ -39,13 +40,25 @@ export default function ChatPage() {
   }, [user, router]);
 
   useEffect(() => {
-    if (!user || !bookId) return;
-    getDoc(doc(db, "books", bookId)).then((snap) => {
-      if (!snap.exists()) { router.push("/home"); return; }
-      if (snap.data().status === "closed") { router.push(`/archive/${bookId}`); return; }
-      setBook({ id: snap.id, ...snap.data() });
-    });
-  }, [user, bookId, router]);
+    if (!user || !slug) return;
+    async function resolve() {
+      let bookDoc;
+      const q = query(collection(db, "books"), where("slug", "==", slug), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        bookDoc = snap.docs[0];
+      } else {
+        const direct = await getDoc(doc(db, "books", slug));
+        if (!direct.exists()) { router.push("/home"); return; }
+        bookDoc = direct;
+      }
+      const data = { id: bookDoc.id, ...bookDoc.data() };
+      if (data.status === "closed") { router.push(`/archive/${data.slug || slug}`); return; }
+      setBook(data);
+      setBookId(bookDoc.id);
+    }
+    resolve();
+  }, [user, slug, router]);
 
   useEffect(() => {
     if (!user || !bookId) return;
@@ -260,7 +273,7 @@ export default function ChatPage() {
             }`}>
               {book.status === "reading" ? "WEEK 1" : book.status === "open" ? "WEEK 2" : "CLOSED"}
             </span>
-            <Link href={`/book/${bookId}`} className="back-link-chat">← 詳細</Link>
+            <Link href={`/book/${slug}`} className="back-link-chat">← 詳細</Link>
           </div>
         </div>
 

@@ -4,14 +4,15 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
 export default function BookPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { bookId } = useParams();
+  const { slug } = useParams();
   const [book, setBook] = useState(null);
+  const [bookId, setBookId] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [descOpen, setDescOpen] = useState(false);
@@ -21,18 +22,27 @@ export default function BookPage() {
   }, [user, router]);
 
   useEffect(() => {
-    if (!user || !bookId) return;
-    async function fetch() {
-      const snap = await getDoc(doc(db, "books", bookId));
-      if (!snap.exists()) { router.push("/home"); return; }
-      setBook({ id: snap.id, ...snap.data() });
-
-      const cSnap = await getDocs(collection(db, "books", bookId, "comments"));
+    if (!user || !slug) return;
+    async function resolve() {
+      let bookDoc;
+      const q = query(collection(db, "books"), where("slug", "==", slug), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        bookDoc = snap.docs[0];
+      } else {
+        const direct = await getDoc(doc(db, "books", slug));
+        if (!direct.exists()) { router.push("/home"); return; }
+        bookDoc = direct;
+      }
+      const data = { id: bookDoc.id, ...bookDoc.data() };
+      setBook(data);
+      setBookId(bookDoc.id);
+      const cSnap = await getDocs(collection(db, "books", bookDoc.id, "comments"));
       setCommentCount(cSnap.size);
       setLoading(false);
     }
-    fetch();
-  }, [user, bookId, router]);
+    resolve();
+  }, [user, slug, router]);
 
   if (user === undefined || loading) return null;
 
@@ -129,7 +139,7 @@ export default function BookPage() {
           )}
         </div>
 
-        <Link href={`/book/${bookId}/chat`} className="btn-chat">
+        <Link href={`/book/${slug}/chat`} className="btn-chat">
           {book.status === "reading" ? "投稿する" : "討論スレを見る"}
         </Link>
 

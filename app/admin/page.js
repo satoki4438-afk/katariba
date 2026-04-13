@@ -11,6 +11,18 @@ import {
 const ADMIN_EMAILS = ["tas.studio2026@gmail.com", "satoki4438@gmail.com"];
 const GENRES = ["SF","恋愛","ミステリー","ファンタジー","ラノベ","歴史","エッセイ","ホラー","純文学","ノンフィクション","その他"];
 
+function generateSlug(title, date) {
+  const d = date instanceof Date ? date : (date?.toDate ? date.toDate() : new Date());
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const sanitized = title
+    .replace(/[　\s]+/g, "-")
+    .replace(/[『』「」【】（）()。、・…！？!?〜～―—\/\\|]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "");
+  return `${sanitized}-${yyyy}-${mm}`;
+}
+
 export default function AdminPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -21,7 +33,7 @@ export default function AdminPage() {
   const [schedulerRunning, setSchedulerRunning] = useState(false);
   const [schedulerResult, setSchedulerResult] = useState("");
 
-  const [newBook, setNewBook] = useState({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "" });
+  const [newBook, setNewBook] = useState({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "", slug: "" });
   const [addingBook, setAddingBook] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -76,6 +88,7 @@ export default function AdminPage() {
       rakutenUrl: item.rakutenUrl || "",
       coverUrl: item.coverUrl || "",
       description: item.description || "",
+      slug: generateSlug(item.title, new Date()),
     }));
     setSearchResults([]);
   }
@@ -83,6 +96,7 @@ export default function AdminPage() {
   async function handleAddBook() {
     if (!newBook.title.trim()) return;
     setAddingBook(true);
+    const slug = newBook.slug.trim() || generateSlug(newBook.title.trim(), new Date());
     await addDoc(collection(db, "books"), {
       title: newBook.title.trim(),
       author: newBook.author.trim(),
@@ -90,12 +104,13 @@ export default function AdminPage() {
       coverUrl: newBook.coverUrl.trim() || null,
       genre: newBook.genre || null,
       description: newBook.description.trim() || null,
+      slug,
       status: "reading",
       week: 1,
       source: "manual",
       createdAt: serverTimestamp(),
     });
-    setNewBook({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "" });
+    setNewBook({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "", slug: "" });
     setAddingBook(false);
     fetchBooks();
   }
@@ -110,6 +125,7 @@ export default function AdminPage() {
       coverUrl: book.coverUrl || "",
       rakutenUrl: book.rakutenUrl || "",
       genre: book.genre || "",
+      slug: book.slug || generateSlug(book.title || "", book.createdAt || new Date()),
     });
   }
 
@@ -123,6 +139,7 @@ export default function AdminPage() {
       coverUrl: editingBook.coverUrl.trim() || null,
       rakutenUrl: editingBook.rakutenUrl.trim() || null,
       genre: editingBook.genre || null,
+      slug: editingBook.slug.trim() || null,
     });
     setSavingEdit(false);
     setEditingBook(null);
@@ -340,7 +357,7 @@ export default function AdminPage() {
                 )}
               </div>
             </div>
-            <div className="form-row" style={{marginBottom:20}}>
+            <div className="form-row" style={{marginBottom:12}}>
               <div>
                 <label className="form-label">ジャンル</label>
                 <select
@@ -361,6 +378,18 @@ export default function AdminPage() {
                   value={newBook.description}
                   onChange={(e) => setNewBook({ ...newBook, description: e.target.value })}
                 />
+              </div>
+            </div>
+            <div className="form-row" style={{marginBottom:20}}>
+              <div>
+                <label className="form-label">スラグ（URL用）</label>
+                <input
+                  className="form-input"
+                  placeholder="タイトル選択時に自動生成"
+                  value={newBook.slug}
+                  onChange={(e) => setNewBook({ ...newBook, slug: e.target.value })}
+                />
+                <div className="form-hint">/book/スラグ でアクセス可能になります</div>
               </div>
             </div>
             <button className="add-btn" onClick={handleAddBook} disabled={addingBook || !newBook.title.trim()}>
@@ -426,6 +455,13 @@ export default function AdminPage() {
                       <div>
                         <label className="form-label">あらすじ</label>
                         <textarea className="form-input" style={{resize:"vertical",minHeight:72}} value={editingBook.description} onChange={(e) => setEditingBook({ ...editingBook, description: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="edit-form-row">
+                      <div>
+                        <label className="form-label">スラグ（URL用）</label>
+                        <input className="form-input" value={editingBook.slug} onChange={(e) => setEditingBook({ ...editingBook, slug: e.target.value })} placeholder="例: コンビニ人間-2026-04" />
+                        <div className="form-hint">/book/スラグ でアクセス可能になります</div>
                       </div>
                     </div>
                     <div className="edit-actions">

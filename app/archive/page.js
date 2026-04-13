@@ -85,7 +85,7 @@ export default function ArchivePage() {
         ) : (
           <div className="arc-grid">
             {books.map((book) => (
-              <Link key={book.id} href={`/archive/${book.id}`} className="arc-card">
+              <Link key={book.id} href={`/archive/${book.slug || book.id}`} className="arc-card">
                 <div className="arc-card-top">
                   <span className="arc-closed-tag">CLOSED</span>
                 </div>

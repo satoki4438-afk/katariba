@@ -136,7 +136,7 @@ export default function HomePage() {
         ) : (
           <div className="books-grid">
             {filtered.map((book) => (
-              <Link key={book.id} href={`/book/${book.id}`} className="book-card">
+              <Link key={book.id} href={`/book/${book.slug || book.id}`} className="book-card">
                 <div className="book-card-top">
                   <span className={`book-week-tag ${
                     book.status === "reading" ? "tag-reading" :

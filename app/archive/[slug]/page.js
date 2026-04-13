@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, orderBy, where, limit, getDocs } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
 const FREE_LIMIT = 50;
@@ -12,32 +12,43 @@ const FREE_LIMIT = 50;
 export default function ArchiveBookPage() {
   const { user, userData } = useAuth();
   const router = useRouter();
-  const { bookId } = useParams();
+  const { slug } = useParams();
   const [book, setBook] = useState(null);
+  const [bookId, setBookId] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
   const [replies, setReplies] = useState({});
 
   useEffect(() => {
-    if (user === undefined || !bookId) return;
-    async function fetch() {
-      const bookSnap = await getDoc(doc(db, "books", bookId));
-      if (!bookSnap.exists()) { router.push("/archive"); return; }
-      const bookData = { id: bookSnap.id, ...bookSnap.data() };
-      if (bookData.status !== "closed") { router.push(`/book/${bookId}`); return; }
-      setBook(bookData);
-
-      const q = query(collection(db, "books", bookId, "comments"), orderBy("createdAt", "asc"));
+    if (user === undefined || !slug) return;
+    async function resolve() {
+      let bookDoc;
+      const q = query(collection(db, "books"), where("slug", "==", slug), limit(1));
       const snap = await getDocs(q);
-      const all = snap.docs
+      if (!snap.empty) {
+        bookDoc = snap.docs[0];
+      } else {
+        const direct = await getDoc(doc(db, "books", slug));
+        if (!direct.exists()) { router.push("/archive"); return; }
+        bookDoc = direct;
+      }
+      const bookData = { id: bookDoc.id, ...bookDoc.data() };
+      const id = bookDoc.id;
+      if (bookData.status !== "closed") { router.push(`/book/${bookData.slug || slug}`); return; }
+      setBook(bookData);
+      setBookId(id);
+
+      const cq = query(collection(db, "books", id, "comments"), orderBy("createdAt", "asc"));
+      const cSnap = await getDocs(cq);
+      const all = cSnap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .filter((c) => c.visible !== false);
       setComments(all.map((c, i) => ({ ...c, num: i + 1 })));
       setLoading(false);
     }
-    fetch();
-  }, [user, bookId, router]);
+    resolve();
+  }, [user, slug, router]);
 
   async function loadReplies(commentId) {
     const q = query(
