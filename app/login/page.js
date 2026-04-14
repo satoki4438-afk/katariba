@@ -32,8 +32,7 @@ export default function LoginPage() {
 
       router.push("/home");
     } catch (e) {
-      console.error("[login error]", e.code, e.message);
-      setError(`ログインに失敗しました。(${e.code || "unknown"})`);
+      setError("ログインに失敗しました。もう一度お試しください。");
       setLoading(false);
     }
   }
