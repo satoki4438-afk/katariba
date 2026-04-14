@@ -15,24 +15,34 @@ export default function PremiumPage() {
 
   async function handleCheckout() {
     setLoading(true);
-    const res = await fetch("/api/stripe/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.uid, email: user.email }),
-    });
-    const { url } = await res.json();
-    window.location.href = url;
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.uid, email: user.email }),
+      });
+      const { url } = await res.json();
+      if (url) { window.location.href = url; } else { setLoading(false); }
+    } catch (e) {
+      console.error("[checkout]", e);
+      setLoading(false);
+    }
   }
 
   async function handlePortal() {
     setLoading(true);
-    const res = await fetch("/api/stripe/portal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customerId: userData.stripeCustomerId }),
-    });
-    const { url } = await res.json();
-    window.location.href = url;
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: userData.stripeCustomerId }),
+      });
+      const { url } = await res.json();
+      if (url) { window.location.href = url; } else { setLoading(false); }
+    } catch (e) {
+      console.error("[portal]", e);
+      setLoading(false);
+    }
   }
 
   if (user === undefined) return null;

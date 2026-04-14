@@ -159,6 +159,27 @@ export default function AdminPage() {
     fetchComments(bookId);
   }
 
+  const [slugging, setSluggin] = useState(false);
+  const [slugResult, setSlugResult] = useState("");
+
+  async function handleBulkSlug() {
+    if (!window.confirm("スラグが未設定の本に一括でスラグを付与します。よろしいですか？")) return;
+    setSluggin(true);
+    setSlugResult("");
+    const snap = await getDocs(collection(db, "books"));
+    const targets = snap.docs.filter((d) => !d.data().slug);
+    let count = 0;
+    for (const d of targets) {
+      const data = d.data();
+      const slug = generateSlug(data.title || "", data.createdAt || new Date());
+      await updateDoc(doc(db, "books", d.id), { slug });
+      count++;
+    }
+    setSlugResult(`完了：${count}件にスラグを付与しました`);
+    setSluggin(false);
+    fetchBooks();
+  }
+
   async function handleRunScheduler() {
     setSchedulerRunning(true);
     setSchedulerResult("");
@@ -290,6 +311,19 @@ export default function AdminPage() {
             </button>
           </div>
           {schedulerResult && <p className="scheduler-result">{schedulerResult}</p>}
+        </div>
+
+        <div className="admin-section">
+          <div className="section-title">一括スラグ付与</div>
+          <div className="scheduler-box">
+            <div className="scheduler-desc">
+              <strong>既存本のスラグ未設定分を一括付与</strong>：slugフィールドがない本に「タイトル-YYYY-MM」形式のスラグを自動生成します。
+            </div>
+            <button className="run-btn" onClick={handleBulkSlug} disabled={slugging}>
+              {slugging ? "処理中..." : "一括付与する"}
+            </button>
+          </div>
+          {slugResult && <p className="scheduler-result">{slugResult}</p>}
         </div>
 
         <div className="admin-section">
