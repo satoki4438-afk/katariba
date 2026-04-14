@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PRICE_ID = "price_1TKFz5CVs98wAKwVq0rwNwhd";
+const BASE_URL = (
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://tas-katariba.jp")
+).trim().replace(/\/$/, "");
 
 export async function POST(req) {
   try {
@@ -12,8 +16,8 @@ export async function POST(req) {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: PRICE_ID, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/premium/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/premium`,
+      success_url: `${BASE_URL}/premium/success`,
+      cancel_url: `${BASE_URL}/premium`,
       client_reference_id: userId,
       customer_email: email,
       metadata: { userId },
