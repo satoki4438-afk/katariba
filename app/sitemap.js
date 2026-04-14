@@ -3,7 +3,7 @@ export const revalidate = 3600;
 export default async function sitemap() {
   const baseUrl = (
     process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://tas-katariba.jp")
   ).trim().replace(/\/$/, "");
 
   const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
@@ -25,28 +25,19 @@ export default async function sitemap() {
     const bookRoutes = docs
       .filter((d) => {
         const status = d.fields?.status?.stringValue;
-        const slug = d.fields?.slug?.stringValue;
-        return slug && (status === "reading" || status === "open");
+        return status === "reading" || status === "open";
       })
-      .map((d) => ({
-        url: `${baseUrl}/book/${d.fields.slug.stringValue}`,
-        changeFrequency: "daily",
-        priority: 0.9,
-        lastModified: new Date(),
-      }));
+      .map((d) => {
+        const slug = d.fields?.slug?.stringValue || d.name.split("/").pop();
+        return { url: `${baseUrl}/book/${slug}`, changeFrequency: "daily", priority: 0.9, lastModified: new Date() };
+      });
 
     const archiveRoutes = docs
-      .filter((d) => {
-        const status = d.fields?.status?.stringValue;
-        const slug = d.fields?.slug?.stringValue;
-        return slug && status === "closed";
-      })
-      .map((d) => ({
-        url: `${baseUrl}/archive/${d.fields.slug.stringValue}`,
-        changeFrequency: "weekly",
-        priority: 0.7,
-        lastModified: new Date(),
-      }));
+      .filter((d) => d.fields?.status?.stringValue === "closed")
+      .map((d) => {
+        const slug = d.fields?.slug?.stringValue || d.name.split("/").pop();
+        return { url: `${baseUrl}/archive/${slug}`, changeFrequency: "weekly", priority: 0.7, lastModified: new Date() };
+      });
 
     return [...staticRoutes, ...bookRoutes, ...archiveRoutes];
   } catch (e) {

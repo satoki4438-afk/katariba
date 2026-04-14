@@ -15,6 +15,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://tas-katariba.jp"),
   title: "カタリバ",
   description: "言葉で、人を好きになる。",
 };
