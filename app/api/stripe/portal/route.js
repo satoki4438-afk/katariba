@@ -5,7 +5,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const BASE_URL = (
   process.env.NEXT_PUBLIC_BASE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://tas-katariba.jp")
-).trim().replace(/\/$/, "");
+).trim().replace(/\/$/, "").replace(/^(https?:\/\/)www\./, "$1");
 
 export async function POST(req) {
   const { customerId } = await req.json();

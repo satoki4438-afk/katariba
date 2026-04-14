@@ -6,7 +6,7 @@ const PRICE_ID = "price_1TKFz5CVs98wAKwVq0rwNwhd";
 const BASE_URL = (
   process.env.NEXT_PUBLIC_BASE_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://tas-katariba.jp")
-).trim().replace(/\/$/, "");
+).trim().replace(/\/$/, "").replace(/^(https?:\/\/)www\./, "$1");
 
 export async function POST(req) {
   try {
