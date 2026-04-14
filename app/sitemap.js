@@ -1,10 +1,12 @@
 export const revalidate = 3600;
 
 export default async function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+  ).trim().replace(/\/$/, "");
 
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const projectId = (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "").trim();
 
   const staticRoutes = [
     { url: baseUrl, changeFrequency: "weekly", priority: 1.0 },
@@ -18,6 +20,7 @@ export default async function sitemap() {
     );
     const data = await res.json();
     const docs = data.documents || [];
+    console.log("[sitemap] fetched books:", docs.length, "projectId:", projectId);
 
     const bookRoutes = docs
       .filter((d) => {
@@ -46,7 +49,8 @@ export default async function sitemap() {
       }));
 
     return [...staticRoutes, ...bookRoutes, ...archiveRoutes];
-  } catch {
+  } catch (e) {
+    console.error("[sitemap] error:", e.message);
     return staticRoutes;
   }
 }
