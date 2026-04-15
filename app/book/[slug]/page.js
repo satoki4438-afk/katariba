@@ -24,13 +24,17 @@ export default function BookPage() {
   useEffect(() => {
     if (!user || !slug) return;
     async function resolve() {
+      const decodedSlug = decodeURIComponent(slug);
+      console.log("[book/resolve] slug:", slug, "decoded:", decodedSlug);
       let bookDoc;
-      const q = query(collection(db, "books"), where("slug", "==", slug), limit(1));
+      const q = query(collection(db, "books"), where("slug", "==", decodedSlug), limit(1));
       const snap = await getDocs(q);
+      console.log("[book/resolve] slug query size:", snap.size);
       if (!snap.empty) {
         bookDoc = snap.docs[0];
       } else {
-        const direct = await getDoc(doc(db, "books", slug));
+        const direct = await getDoc(doc(db, "books", decodedSlug));
+        console.log("[book/resolve] direct lookup exists:", direct.exists());
         if (!direct.exists()) { router.push("/home"); return; }
         bookDoc = direct;
       }
@@ -44,7 +48,7 @@ export default function BookPage() {
     resolve();
   }, [user, slug, router]);
 
-  if (user === undefined || loading) return null;
+  if (user === undefined || loading || !book) return null;
 
   const statusLabel = book.status === "reading" ? "WEEK 1 · 読書中" :
                       book.status === "open" ? "WEEK 2 · 討論中" : "CLOSED";
