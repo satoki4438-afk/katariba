@@ -68,7 +68,7 @@ export default function HomePage() {
         .books-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:2px; background:var(--line); }
         @media(max-width:600px){ .books-grid { grid-template-columns:1fr; } }
 
-        .book-card { background:var(--bg); padding:20px 24px 24px; transition:background 0.2s; text-decoration:none; display:block; }
+        .book-card { background:var(--bg); padding:20px 24px 24px; transition:background 0.2s; text-decoration:none; display:block; cursor:pointer; touch-action:manipulation; }
         .book-card:hover { background:var(--bg2); }
 
         .book-card-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
@@ -136,7 +136,8 @@ export default function HomePage() {
         ) : (
           <div className="books-grid">
             {filtered.map((book) => (
-              <Link key={book.id} href={`/book/${book.slug || book.id}`} className="book-card">
+              <div key={book.id} className="book-card" onClick={() => router.push(`/book/${book.slug || book.id}`)}>
+
                 <div className="book-card-top">
                   <span className={`book-week-tag ${
                     book.status === "reading" ? "tag-reading" :
@@ -171,7 +172,7 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
