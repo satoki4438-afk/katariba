@@ -117,7 +117,7 @@ export default function TopPage() {
         <div className="nav-right">
           <a href="#how" className="nav-link">仕組み</a>
           <a href="#plan" className="nav-link">料金</a>
-          <Link href="/login" className="nav-btn">早期登録</Link>
+          <Link href="/login" className="nav-btn">登録する</Link>
         </div>
       </nav>
 
@@ -128,7 +128,7 @@ export default function TopPage() {
             <h1 className="hero-title">本を読んだら、<br />語りたい。</h1>
             <p className="hero-body">本について、誰かと話したい。そんな気持ちに応えるコミュニティ。匿名で、でも本音で。</p>
             <div className="hero-actions">
-              <Link href="/login" className="btn-fill">無料で始める</Link>
+              <Link href="/login" className="btn-fill">登録する</Link>
               <a href="#how" className="btn-arrow">仕組みを見る</a>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function TopPage() {
             <div style={{background:"var(--bg2)",border:"1px solid var(--line)",padding:"80px 40px",textAlign:"center"}}>
               <p style={{fontSize:"11px",fontWeight:500,letterSpacing:"4px",color:"var(--muted)",textTransform:"uppercase",marginBottom:"20px"}}>Coming Soon</p>
               <p style={{fontSize:"20px",fontWeight:700,color:"var(--text)",letterSpacing:"-0.5px",marginBottom:"16px"}}>討論スレ、準備中。</p>
-              <p style={{fontSize:"13px",color:"var(--muted)",lineHeight:2}}>早期登録者には<br />オープン初日からご参加いただけます。</p>
+              <p style={{fontSize:"13px",color:"var(--muted)",lineHeight:2}}>登録者には<br />オープン初日からご参加いただけます。</p>
             </div>
           </div>
         </section>
@@ -153,9 +153,7 @@ export default function TopPage() {
 
       <section className="statement reveal">
         <p className="statement-big">
-          映画は一緒に観れば語れる。<br />
-          <span className="fade">でも本は、一人で読むものだから。</span><br />
-          語る場所が、<span className="accent">なかった。</span>
+          本を語れる場所を増やしたい。
         </p>
       </section>
 
@@ -243,8 +241,8 @@ export default function TopPage() {
 
       <section className="cta-section" id="waitlist">
         <h2 className="cta-title reveal">語りに、<br /><span>行きませんか。</span></h2>
-        <p className="cta-sub reveal">早期登録受付中。無料で始められます。</p>
-        <Link href="/login" className="btn-fill reveal" style={{fontSize:"15px",padding:"18px 56px",letterSpacing:"2px"}}>無料で登録する</Link>
+        <p className="cta-sub reveal">無料で始められます。</p>
+        <Link href="/login" className="btn-fill reveal" style={{fontSize:"15px",padding:"18px 56px",letterSpacing:"2px"}}>登録する</Link>
       </section>
 
       <footer>
