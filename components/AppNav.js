@@ -77,8 +77,9 @@ export default function AppNav() {
           display:flex; flex-direction:column;
           transform:translateX(100%);
           transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+          pointer-events:none;
         }
-        .app-mobile-menu.open { transform:translateX(0); }
+        .app-mobile-menu.open { transform:translateX(0); pointer-events:auto; }
 
         .app-mobile-header {
           height:56px; padding:0 20px;
