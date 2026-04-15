@@ -23,13 +23,14 @@ export default function ArchiveBookPage() {
   useEffect(() => {
     if (user === undefined || !slug) return;
     async function resolve() {
+      const decodedSlug = decodeURIComponent(slug);
       let bookDoc;
-      const q = query(collection(db, "books"), where("slug", "==", slug), limit(1));
+      const q = query(collection(db, "books"), where("slug", "==", decodedSlug), limit(1));
       const snap = await getDocs(q);
       if (!snap.empty) {
         bookDoc = snap.docs[0];
       } else {
-        const direct = await getDoc(doc(db, "books", slug));
+        const direct = await getDoc(doc(db, "books", decodedSlug));
         if (!direct.exists()) { router.push("/archive"); return; }
         bookDoc = direct;
       }

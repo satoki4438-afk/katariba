@@ -1,6 +1,7 @@
 export async function generateMetadata({ params }) {
   try {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const decodedSlug = decodeURIComponent(params.slug);
     const res = await fetch(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
       {
@@ -9,7 +10,7 @@ export async function generateMetadata({ params }) {
         body: JSON.stringify({
           structuredQuery: {
             from: [{ collectionId: "books" }],
-            where: { fieldFilter: { field: { fieldPath: "slug" }, op: "EQUAL", value: { stringValue: params.slug } } },
+            where: { fieldFilter: { field: { fieldPath: "slug" }, op: "EQUAL", value: { stringValue: decodedSlug } } },
             limit: 1,
           },
         }),
