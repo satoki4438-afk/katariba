@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { collection, query, where, orderBy, getDocs, getCountFromServer } from "firebase/firestore";
+import { collection, query, where, getDocs, getCountFromServer } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
 export default function ArchivePage() {
@@ -16,13 +16,11 @@ export default function ArchivePage() {
   useEffect(() => {
     if (user === undefined) return;
     async function fetch() {
-      const q = query(
-        collection(db, "books"),
-        where("status", "==", "closed"),
-        orderBy("createdAt", "desc")
-      );
+      const q = query(collection(db, "books"), where("status", "==", "closed"));
       const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
       const withCounts = await Promise.all(
         list.map(async (book) => {
           const c = await getCountFromServer(collection(db, "books", book.id, "comments"));
