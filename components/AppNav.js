@@ -145,7 +145,7 @@ export default function AppNav() {
         </button>
       </nav>
 
-      <div className={`app-mobile-menu${menuOpen ? " open" : ""}`}>
+      <div className={`app-mobile-menu${menuOpen ? " open" : ""}`} style={!menuOpen ? {pointerEvents:"none"} : undefined}>
         <div className="app-mobile-header">
           <span className="app-mobile-logo">カタリバ</span>
           <button className="app-mobile-close" onClick={close} aria-label="閉じる">
