@@ -45,6 +45,10 @@ export default function PremiumPage() {
     }
   }
 
+  const trialEndsAt = userData?.trialEndsAt?.toDate?.();
+  const isTrialing = trialEndsAt && trialEndsAt > new Date() && !userData?.stripeCustomerId;
+  const trialDaysLeft = isTrialing ? Math.ceil((trialEndsAt - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+
   if (user === undefined) return null;
 
   return (
@@ -90,6 +94,8 @@ export default function PremiumPage() {
         }
         .already-premium-title { font-size:17px; font-weight:700; color:var(--text); margin-bottom:8px; }
         .already-premium-sub { font-size:13px; color:var(--muted); line-height:1.9; }
+        .trial-badge { display:inline-block; background:var(--bg2); border:1px solid var(--line); padding:6px 14px; font-size:12px; color:var(--muted); margin-bottom:12px; }
+        .trial-badge strong { color:var(--text); }
 
         .stripe-note { font-size:12px; color:var(--muted); text-align:center; margin-top:20px; line-height:1.9; }
       `}</style>
@@ -103,9 +109,15 @@ export default function PremiumPage() {
         {userData?.isPremium ? (
           <>
             <div className="already-premium">
-              <div className="already-premium-title">プレミアム会員です</div>
+              {isTrialing && (
+                <div className="trial-badge">無料トライアル中 — <strong>残り{trialDaysLeft}日</strong></div>
+              )}
+              <div className="already-premium-title">{isTrialing ? "トライアル中" : "プレミアム会員です"}</div>
               <div className="already-premium-sub">
-                すべての機能が利用できます。解約・プラン変更はStripeのカスタマーポータルから行えます。
+                {isTrialing
+                  ? `登録から60日間、プレミアム機能を無料でお試しいただけます。トライアル終了後は月額¥500の課金が始まります。`
+                  : "すべての機能が利用できます。解約・プラン変更はStripeのカスタマーポータルから行えます。"
+                }
               </div>
               {userData?.stripeCustomerId && (
                 <button className="checkout-btn inverse" onClick={handlePortal} disabled={loading} style={{marginTop:"20px"}}>

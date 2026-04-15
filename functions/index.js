@@ -61,6 +61,24 @@ async function getBestseller(recentTitles) {
   return null;
 }
 
+// 毎日 午前1時(JST) にトライアル期限切れユーザーの isPremium を false に更新
+exports.dailyTrialExpiry = onSchedule(
+  { schedule: "0 1 * * *", timeZone: "Asia/Tokyo", region: "asia-northeast1" },
+  async () => {
+    const now = admin.firestore.Timestamp.now();
+    const snap = await db.collection("users")
+      .where("isPremium", "==", true)
+      .where("trialEndsAt", "<=", now)
+      .get();
+    const batch = db.batch();
+    snap.docs
+      .filter((d) => !d.data().stripeCustomerId) // 有料契約済みはスキップ
+      .forEach((d) => batch.update(d.ref, { isPremium: false }));
+    await batch.commit();
+    console.log(`[trialExpiry] expired: ${snap.size} checked`);
+  }
+);
+
 // 週次スケジューラー（毎週土曜 午前9時 JST = UTC 0時）
 exports.weeklyBookScheduler = onSchedule(
   { schedule: "0 0 * * 6", timeZone: "Asia/Tokyo", region: "asia-northeast1" },

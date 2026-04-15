@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,16 +21,23 @@ export default function LoginPage() {
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
       if (!snap.exists()) {
+        const trialEnd = new Date();
+        trialEnd.setDate(trialEnd.getDate() + 60);
         await setDoc(ref, {
           displayName: user.displayName || "",
-          isPremium: false,
+          isPremium: true,
+          trialEndsAt: Timestamp.fromDate(trialEnd),
           stripeCustomerId: null,
           badgeCount: 0,
+          setupCompleted: false,
           createdAt: serverTimestamp(),
         });
+        router.push("/setup");
+      } else if (!snap.data().setupCompleted) {
+        router.push("/setup");
+      } else {
+        router.push("/home");
       }
-
-      router.push("/home");
     } catch (e) {
       setError("ログインに失敗しました。もう一度お試しください。");
       setLoading(false);
