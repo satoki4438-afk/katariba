@@ -41,6 +41,7 @@ export default function AdminPage() {
 
   const [editingBook, setEditingBook] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [bookTab, setBookTab] = useState("active"); // "active" | "archived"
 
   useEffect(() => {
     if (user === null) { router.push("/login"); return; }
@@ -288,6 +289,10 @@ export default function AdminPage() {
         .feature-toggle { font-size:11px; border:none; padding:5px 12px; cursor:pointer; font-family:'Noto Sans JP',sans-serif; white-space:nowrap; flex-shrink:0; }
         .feature-toggle.on { background:var(--red); color:white; }
         .feature-toggle.off { background:var(--bg3); color:var(--muted); }
+
+        .book-tabs { display:flex; border-bottom:1px solid var(--line); margin-bottom:16px; }
+        .book-tab { padding:10px 20px; font-size:12px; font-weight:500; background:none; border:none; cursor:pointer; color:var(--muted); font-family:'Noto Sans JP',sans-serif; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all 0.15s; letter-spacing:0.5px; }
+        .book-tab.active { color:var(--text); border-bottom-color:var(--text); }
       `}</style>
 
       <div style={{borderBottom:"1px solid var(--line)",padding:"16px 40px",display:"flex",alignItems:"center",gap:24,background:"white"}}>
@@ -434,8 +439,18 @@ export default function AdminPage() {
 
         <div className="admin-section">
           <div className="section-title">本一覧・ステータス管理</div>
+          <div className="book-tabs">
+            <button
+              className={`book-tab${bookTab === "active" ? " active" : ""}`}
+              onClick={() => { setBookTab("active"); setEditingBook(null); setSelectedBookId(""); setFeaturedCandidates([]); }}
+            >運用中</button>
+            <button
+              className={`book-tab${bookTab === "archived" ? " active" : ""}`}
+              onClick={() => { setBookTab("archived"); setEditingBook(null); setSelectedBookId(""); setFeaturedCandidates([]); }}
+            >アーカイブ済み</button>
+          </div>
           <div className="books-table">
-            {books.map((book) => (
+            {books.filter((b) => bookTab === "active" ? b.status !== "closed" : b.status === "closed").map((book) => (
               <div key={book.id}>
                 <div className="books-row">
                   <div>
