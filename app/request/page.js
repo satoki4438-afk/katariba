@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
-const GENRES = ["SF", "恋愛", "ミステリー", "ファンタジー", "ラノベ", "歴史", "エッセイ", "ホラー", "純文学", "ノンフィクション", "その他"];
+const GENRES = ["SF", "恋愛", "ミステリー", "サスペンス", "ファンタジー", "ラノベ", "歴史", "ホラー", "純文学", "ノンフィクション", "その他"];
 
 const EMPTY_FORM = { title: "", author: "", coverUrl: "", rakutenUrl: "", genre: "" };
 

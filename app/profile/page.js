@@ -11,9 +11,8 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AppNav from "@/components/AppNav";
 
 const GENRE_TAGS = [
-  "文学・小説", "歴史・時代小説", "哲学・思想", "社会・政治",
-  "経済・ビジネス", "科学・テクノロジー", "心理学", "芸術・文化",
-  "エッセイ", "ノンフィクション", "詩歌・古典", "その他",
+  "SF", "恋愛", "ミステリー", "サスペンス", "ファンタジー", "ラノベ",
+  "歴史", "ホラー", "純文学", "ノンフィクション", "その他",
 ];
 
 const RONKAKU = 1000;

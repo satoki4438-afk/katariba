@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 
 const ADMIN_EMAILS = ["tas.studio2026@gmail.com", "satoki4438@gmail.com"];
-const GENRES = ["SF","恋愛","ミステリー","ファンタジー","ラノベ","歴史","エッセイ","ホラー","純文学","ノンフィクション","その他"];
+const GENRES = ["SF","恋愛","ミステリー","サスペンス","ファンタジー","ラノベ","歴史","ホラー","純文学","ノンフィクション","その他"];
 
 function generateSlug(title, date) {
   const d = date instanceof Date ? date : (date?.toDate ? date.toDate() : new Date());
