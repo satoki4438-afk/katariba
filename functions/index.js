@@ -177,24 +177,20 @@ async function getTopRequestBook(recentTitles) {
   if (rankDoc.exists) {
     books = rankDoc.data().books || [];
   } else {
-    // フォールバック: votes を直接集計
-    const votesSnap = await db.collection("votes").get();
-    const countMap = {};
-    const metaMap = {};
-    votesSnap.docs.forEach((d) => {
-      const data = d.data();
-      const { book_id, book_title } = data;
-      if (!book_id) return;
-      countMap[book_id] = (countMap[book_id] || 0) + 1;
-      if (!metaMap[book_id]) metaMap[book_id] = data;
-    });
-    books = Object.entries(countMap)
-      .map(([book_id, vote_count]) => ({
-        book_id,
-        book_title: metaMap[book_id]?.book_title || "",
-        vote_count,
-      }))
-      .sort((a, b) => b.vote_count - a.vote_count);
+    // フォールバック: requests を直接集計
+    const reqSnap = await db.collection("requests").get();
+    books = reqSnap.docs
+      .map((d) => ({ book_id: d.id, ...d.data() }))
+      .filter((d) => !d.used)
+      .sort((a, b) => (b.count || 0) - (a.count || 0))
+      .slice(0, 50)
+      .map((d) => ({
+        book_id: d.book_id,
+        book_title: d.title || "",
+        author: d.author || "",
+        coverUrl: d.coverUrl || null,
+        vote_count: d.count || 0,
+      }));
   }
 
   for (const b of books) {
@@ -319,14 +315,8 @@ async function runWeeklyScheduler() {
     });
     addedIds.push(ref.id);
 
-    // 選出された本の投票をリセット（削除）
-    const votesSnap = await db.collection("votes")
-      .where("book_id", "==", topRequest.book_id).get();
-    if (!votesSnap.empty) {
-      const delBatch = db.batch();
-      votesSnap.docs.forEach((d) => delBatch.delete(d.ref));
-      await delBatch.commit();
-    }
+    // 選出された本を used: true にマーク
+    await db.collection("requests").doc(topRequest.book_id).update({ used: true });
   }
 
   await threadBatch.commit();
@@ -376,26 +366,19 @@ async function runDailyBatch() {
 
 // ① リクエストランキング集計
 async function updateRequestRanking(now) {
-  const votesSnap = await db.collection("votes").get();
-
-  const countMap = {};
-  const titleMap = {};
-
-  votesSnap.docs.forEach((d) => {
-    const { book_id, book_title } = d.data();
-    if (!book_id) return;
-    countMap[book_id] = (countMap[book_id] || 0) + 1;
-    titleMap[book_id] = book_title;
-  });
-
-  const books = Object.entries(countMap)
-    .map(([book_id, vote_count]) => ({
-      book_id,
-      book_title: titleMap[book_id] || "",
-      vote_count,
-    }))
-    .sort((a, b) => b.vote_count - a.vote_count)
-    .slice(0, 50);
+  const snap = await db.collection("requests").get();
+  const books = snap.docs
+    .map((d) => ({ book_id: d.id, ...d.data() }))
+    .filter((d) => !d.used)
+    .sort((a, b) => (b.count || 0) - (a.count || 0))
+    .slice(0, 50)
+    .map((d) => ({
+      book_id: d.book_id,
+      book_title: d.title || "",
+      author: d.author || "",
+      coverUrl: d.coverUrl || null,
+      vote_count: d.count || 0,
+    }));
 
   await db.collection("metadata").doc("request_ranking").set({
     books,
