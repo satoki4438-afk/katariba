@@ -71,6 +71,10 @@ service cloud.firestore {
         allow read: if isAuth() && request.auth.uid == userId;
         allow write: if isAuth() && request.auth.uid == fromUserId;
       }
+
+      match /weeklyVotes/{weekId} {
+        allow read, write: if isAuth() && request.auth.uid == userId;
+      }
     }
 
     match /likes/{fromUserId} {

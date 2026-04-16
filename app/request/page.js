@@ -6,10 +6,20 @@ import { db } from "@/lib/firebase";
 import {
   collection, query, orderBy, getDocs, addDoc,
   serverTimestamp, doc, updateDoc, increment,
+  getDoc, setDoc, arrayUnion,
 } from "firebase/firestore";
 import AppNav from "@/components/AppNav";
 
 const GENRES = ["SF", "恋愛", "ミステリー", "サスペンス", "ファンタジー", "ラノベ", "歴史", "ホラー", "純文学", "ノンフィクション", "その他"];
+
+function getWeekKey() {
+  const now = new Date();
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const day = jst.getUTCDay(); // 0=Sun, 6=Sat
+  const daysSinceSat = day === 6 ? 0 : day + 1;
+  const sat = new Date(jst.getTime() - daysSinceSat * 24 * 60 * 60 * 1000);
+  return sat.toISOString().slice(0, 10);
+}
 
 const EMPTY_FORM = { title: "", author: "", coverUrl: "", rakutenUrl: "", genre: "" };
 
@@ -28,6 +38,7 @@ export default function RequestPage() {
   const [searching, setSearching] = useState(false);
 
   const [activeGenre, setActiveGenre] = useState("すべて");
+  const [votedIds, setVotedIds] = useState(new Set());
 
   useEffect(() => {
     if (user === null) router.push("/login");
@@ -36,7 +47,26 @@ export default function RequestPage() {
   useEffect(() => {
     if (!user) return;
     fetchRequests();
+    fetchVotedIds();
   }, [user]);
+
+  async function fetchVotedIds() {
+    const weekKey = getWeekKey();
+    const snap = await getDoc(doc(db, "users", user.uid, "weeklyVotes", weekKey));
+    if (snap.exists()) {
+      setVotedIds(new Set(snap.data().votedIds || []));
+    }
+  }
+
+  async function recordVote(requestId) {
+    const weekKey = getWeekKey();
+    await setDoc(
+      doc(db, "users", user.uid, "weeklyVotes", weekKey),
+      { votedIds: arrayUnion(requestId) },
+      { merge: true }
+    );
+    setVotedIds((prev) => new Set([...prev, requestId]));
+  }
 
   async function fetchRequests() {
     const q = query(collection(db, "requests"), orderBy("count", "desc"));
@@ -87,9 +117,11 @@ export default function RequestPage() {
     const existing = requests.find((r) => r.title.trim() === form.title.trim());
 
     if (existing) {
+      if (votedIds.has(existing.id)) { setError("この本にはすでに今週投票済みです"); setPosting(false); return; }
       await updateDoc(doc(db, "requests", existing.id), { count: increment(1) });
+      await recordVote(existing.id);
     } else {
-      await addDoc(collection(db, "requests"), {
+      const ref = await addDoc(collection(db, "requests"), {
         title: form.title.trim(),
         author: form.author.trim(),
         genre: form.genre,
@@ -100,6 +132,7 @@ export default function RequestPage() {
         used: false,
         createdAt: serverTimestamp(),
       });
+      await recordVote(ref.id);
     }
 
     setForm(EMPTY_FORM);
@@ -109,8 +142,9 @@ export default function RequestPage() {
   }
 
   async function handleVote(r) {
-    if (!user) return;
+    if (!user || votedIds.has(r.id)) return;
     await updateDoc(doc(db, "requests", r.id), { count: increment(1) });
+    await recordVote(r.id);
     fetchRequests();
   }
 
@@ -339,9 +373,9 @@ export default function RequestPage() {
                     {r.genre && <span className="req-row-genre">{r.genre}</span>}
                   </div>
                 </div>
-                <button className="req-vote" onClick={() => handleVote(r)} disabled={!!r.used}>
+                <button className="req-vote" onClick={() => handleVote(r)} disabled={!!r.used || votedIds.has(r.id)}>
                   <span className="req-vote-count">{r.count}</span>
-                  <span className="req-vote-label">VOTE</span>
+                  <span className="req-vote-label">{votedIds.has(r.id) ? "投票済み" : "VOTE"}</span>
                 </button>
               </div>
             ))}
