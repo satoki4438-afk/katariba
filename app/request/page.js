@@ -11,6 +11,8 @@ import {
 import AppNav from "@/components/AppNav";
 
 const GENRES = ["SF", "恋愛", "ミステリー", "サスペンス", "ファンタジー", "ラノベ", "歴史", "ホラー", "純文学", "ノンフィクション", "その他"];
+const VOTE_LIMIT_PREMIUM = 3;
+const VOTE_LIMIT_FREE = 1;
 
 function getWeekKey() {
   const now = new Date();
@@ -111,6 +113,7 @@ export default function RequestPage() {
     if (!form.title.trim()) { setError("タイトルを入力してください"); return; }
     if (!form.genre) { setError("ジャンルを選択してください"); return; }
     if (!userData?.isPremium) { setError("リクエスト投稿はプレミアム会員限定です"); return; }
+    if (votedIds.size >= VOTE_LIMIT_PREMIUM) { setError("今週の投票上限（3票）に達しています"); return; }
     setPosting(true);
     setError("");
 
@@ -142,7 +145,8 @@ export default function RequestPage() {
   }
 
   async function handleVote(r) {
-    if (!user || votedIds.has(r.id)) return;
+    const limit = userData?.isPremium ? VOTE_LIMIT_PREMIUM : VOTE_LIMIT_FREE;
+    if (!user || votedIds.has(r.id) || votedIds.size >= limit) return;
     await updateDoc(doc(db, "requests", r.id), { count: increment(1) });
     await recordVote(r.id);
     fetchRequests();
@@ -262,12 +266,19 @@ export default function RequestPage() {
       <div className="req-wrap">
         <h1 className="req-heading">リクエスト</h1>
         <p className="req-sub">
-          読みたい本をリクエストしてください。投票数1位の本が毎週自動で選ばれます。<br />
-          同じ本へのリクエストは「+1」として集計されます。
+          投票数1位の本が毎週自動で選ばれます。同じ本への投票は「+1」として集計されます。
         </p>
 
         <div className="req-form">
-          <label className="req-form-label">本を検索して選択</label>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
+            <label className="req-form-label" style={{marginBottom:0}}>本を検索して選択</label>
+            <span style={{fontSize:11,color:"var(--muted)"}}>
+              {userData?.isPremium
+                ? `リクエスト可 · 週3票（残り${VOTE_LIMIT_PREMIUM - votedIds.size}票）`
+                : `週1投票のみ可（残り${Math.max(0, VOTE_LIMIT_FREE - votedIds.size)}票）`
+              }
+            </span>
+          </div>
           <div className="req-search-wrap">
             <input
               className="req-input"
@@ -373,7 +384,7 @@ export default function RequestPage() {
                     {r.genre && <span className="req-row-genre">{r.genre}</span>}
                   </div>
                 </div>
-                <button className="req-vote" onClick={() => handleVote(r)} disabled={!!r.used || votedIds.has(r.id)}>
+                <button className="req-vote" onClick={() => handleVote(r)} disabled={!!r.used || votedIds.has(r.id) || votedIds.size >= (userData?.isPremium ? VOTE_LIMIT_PREMIUM : VOTE_LIMIT_FREE)}>
                   <span className="req-vote-count">{r.count}</span>
                   <span className="req-vote-label">{votedIds.has(r.id) ? "投票済み" : "VOTE"}</span>
                 </button>
