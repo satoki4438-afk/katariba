@@ -24,6 +24,7 @@ export default function ProfilePage() {
   const searchTimer = useRef(null);
 
   const [activeTab, setActiveTab] = useState("bookshelf");
+  const [copyToast, setCopyToast] = useState(false);
 
   // icon
   const [iconUrl, setIconUrl] = useState(null);
@@ -497,6 +498,19 @@ export default function ProfilePage() {
         .p-history-expand:hover { color:var(--text); }
         .p-empty { font-size:13px; color:var(--muted); line-height:2; }
         .p-loading { font-size:12px; color:var(--muted); letter-spacing:2px; }
+
+        .p-invite-btn {
+          font-size:12px; color:var(--muted); background:none;
+          border:1px solid var(--line); padding:7px 18px; cursor:pointer;
+          font-family:'Noto Sans JP',sans-serif; transition:all 0.15s; margin-top:14px; display:inline-block;
+        }
+        .p-invite-btn:hover { border-color:var(--text); color:var(--text); }
+        .p-toast {
+          position:fixed; bottom:32px; left:50%; transform:translateX(-50%);
+          background:var(--text); color:white; font-size:13px; padding:12px 24px;
+          z-index:999; pointer-events:none; opacity:0; transition:opacity 0.2s;
+        }
+        .p-toast.show { opacity:1; }
       `}</style>
 
       <AppNav />
@@ -550,6 +564,13 @@ export default function ProfilePage() {
                 </div>
                 <button className="p-genre-edit-btn" onClick={() => setGenreEditing(true)}>
                   ジャンルを編集
+                </button>
+                <button className="p-invite-btn" onClick={() => {
+                  navigator.clipboard.writeText(`https://katariba-flame.vercel.app/login?ref=${user.uid}`);
+                  setCopyToast(true);
+                  setTimeout(() => setCopyToast(false), 2000);
+                }}>
+                  友達を招待する
                 </button>
               </>
             ) : (
@@ -934,6 +955,8 @@ export default function ProfilePage() {
         )}
 
       </div>
+
+      <div className={`p-toast${copyToast ? " show" : ""}`}>リンクをコピーしました！</div>
     </>
   );
 }
