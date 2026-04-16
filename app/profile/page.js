@@ -318,7 +318,10 @@ export default function ProfilePage() {
         .p-icon-overlay span { font-size:11px; color:white; letter-spacing:1px; }
         .p-icon-uploading { position:absolute; inset:0; background:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; }
         .p-header-body { flex:1; min-width:0; }
-        .p-name { font-size:22px; font-weight:900; color:var(--text); letter-spacing:-0.5px; margin-bottom:12px; }
+        .p-name { font-size:22px; font-weight:900; color:var(--text); letter-spacing:-0.5px; margin-bottom:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .p-premium-badge { font-size:10px; font-weight:700; letter-spacing:2px; padding:3px 10px; background:var(--text); color:white; }
+        .p-upgrade-link { font-size:12px; color:var(--muted); text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:1px; transition:color 0.2s; }
+        .p-upgrade-link:hover { color:var(--text); border-bottom-color:var(--text); }
 
         .p-genres { display:flex; flex-wrap:wrap; gap:6px; }
         .p-genre-tag {
@@ -527,7 +530,13 @@ export default function ProfilePage() {
           </div>
 
           <div className="p-header-body">
-            <div className="p-name">{userData?.displayName || "匿名ユーザー"}</div>
+            <div className="p-name">
+              {userData?.displayName || "匿名ユーザー"}
+              {userData?.isPremium
+                ? <span className="p-premium-badge">PREMIUM</span>
+                : <a href="/premium" className="p-upgrade-link">プレミアムにアップグレード</a>
+              }
+            </div>
 
             {!genreEditing ? (
               <>
