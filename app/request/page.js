@@ -266,7 +266,8 @@ export default function RequestPage() {
       <div className="req-wrap">
         <h1 className="req-heading">リクエスト</h1>
         <p className="req-sub">
-          投票数1位の本が毎週自動で選ばれます。同じ本への投票は「+1」として集計されます。
+          投票数1位の本が毎週自動で選ばれます。同じ本への投票は「+1」として集計されます。<br />
+          リクエスト（新規登録）：プレミアム会員のみ / 投票（+1）：プレミアム週3票・無料会員週1票
         </p>
 
         <div className="req-form">
