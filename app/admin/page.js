@@ -54,7 +54,7 @@ export default function AdminPage() {
   }, [user]);
 
   async function fetchBooks() {
-    const snap = await getDocs(query(collection(db, "books"), orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(collection(db, "threads"), orderBy("created_at", "desc")));
     setBooks(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   }
 
@@ -98,7 +98,7 @@ export default function AdminPage() {
     if (!newBook.title.trim()) return;
     setAddingBook(true);
     const slug = newBook.slug.trim() || generateSlug(newBook.title.trim(), new Date());
-    await addDoc(collection(db, "books"), {
+    await addDoc(collection(db, "threads"), {
       title: newBook.title.trim(),
       author: newBook.author.trim(),
       rakutenUrl: newBook.rakutenUrl.trim() || null,
@@ -106,10 +106,14 @@ export default function AdminPage() {
       genre: newBook.genre || null,
       description: newBook.description.trim() || null,
       slug,
-      status: "reading",
+      status: "week1",
       week: 1,
       source: "manual",
-      createdAt: serverTimestamp(),
+      created_at: serverTimestamp(),
+      likes_count: 0,
+      reply_count: 0,
+      score: 0,
+      visible: false,
     });
     setNewBook({ title: "", author: "", rakutenUrl: "", coverUrl: "", genre: "", description: "", slug: "" });
     setAddingBook(false);
@@ -133,7 +137,7 @@ export default function AdminPage() {
   async function handleSaveEdit() {
     if (!editingBook) return;
     setSavingEdit(true);
-    await updateDoc(doc(db, "books", editingBook.id), {
+    await updateDoc(doc(db, "threads", editingBook.id), {
       title: editingBook.title.trim(),
       author: editingBook.author.trim(),
       description: editingBook.description.trim() || null,
@@ -150,13 +154,13 @@ export default function AdminPage() {
   async function fetchComments(bookId) {
     setSelectedBookId(bookId);
     const snap = await getDocs(
-      query(collection(db, "books", bookId, "comments"), orderBy("likeCount", "desc"))
+      query(collection(db, "threads", bookId, "comments"), orderBy("likeCount", "desc"))
     );
     setFeaturedCandidates(snap.docs.map((d) => ({ id: d.id, ...d.data() })).slice(0, 20));
   }
 
   async function toggleFeatured(bookId, commentId, current) {
-    await updateDoc(doc(db, "books", bookId, "comments", commentId), { featured: !current });
+    await updateDoc(doc(db, "threads", bookId, "comments", commentId), { featured: !current });
     fetchComments(bookId);
   }
 
@@ -167,13 +171,13 @@ export default function AdminPage() {
     if (!window.confirm("スラグが未設定の本に一括でスラグを付与します。よろしいですか？")) return;
     setSluggin(true);
     setSlugResult("");
-    const snap = await getDocs(collection(db, "books"));
+    const snap = await getDocs(collection(db, "threads"));
     const targets = snap.docs.filter((d) => !d.data().slug);
     let count = 0;
     for (const d of targets) {
       const data = d.data();
-      const slug = generateSlug(data.title || "", data.createdAt || new Date());
-      await updateDoc(doc(db, "books", d.id), { slug });
+      const slug = generateSlug(data.title || "", data.created_at || new Date());
+      await updateDoc(doc(db, "threads", d.id), { slug });
       count++;
     }
     setSlugResult(`完了：${count}件にスラグを付与しました`);
@@ -187,7 +191,7 @@ export default function AdminPage() {
     try {
       const res = await fetch("https://runweeklyschedulermanual-4m65hweeqa-an.a.run.app", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Admin-Secret": process.env.NEXT_PUBLIC_ADMIN_SECRET || "" },
       });
       const data = await res.json();
       setSchedulerResult(data.success ? "実行完了" : `エラー: ${data.error}`);
@@ -199,13 +203,13 @@ export default function AdminPage() {
   }
 
   async function handleStatusChange(bookId, status) {
-    await updateDoc(doc(db, "books", bookId), { status });
+    await updateDoc(doc(db, "threads", bookId), { status });
     fetchBooks();
   }
 
   async function handleDeleteBook(bookId, title) {
     if (!window.confirm(`「${title}」を削除しますか？`)) return;
-    await deleteDoc(doc(db, "books", bookId));
+    await deleteDoc(doc(db, "threads", bookId));
     if (selectedBookId === bookId) { setSelectedBookId(""); setFeaturedCandidates([]); }
     if (editingBook?.id === bookId) setEditingBook(null);
     fetchBooks();
@@ -458,8 +462,8 @@ export default function AdminPage() {
                     <div className="book-row-author">{book.author} · Week {book.week}{book.genre ? ` · ${book.genre}` : ""}</div>
                   </div>
                   <select className="status-select" value={book.status} onChange={(e) => handleStatusChange(book.id, e.target.value)}>
-                    <option value="reading">reading</option>
-                    <option value="open">open</option>
+                    <option value="week1">week1</option>
+                    <option value="week2">week2</option>
                     <option value="closed">closed</option>
                   </select>
                   <button className="edit-btn" onClick={() => handleStartEdit(book)}>

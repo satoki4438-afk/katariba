@@ -16,14 +16,14 @@ export default function ArchivePage() {
   useEffect(() => {
     if (user === undefined) return;
     async function fetch() {
-      const q = query(collection(db, "books"), where("status", "==", "closed"));
+      const q = query(collection(db, "threads"), where("status", "==", "closed"));
       const snap = await getDocs(q);
       const list = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        .sort((a, b) => (b.created_at?.seconds || 0) - (a.createdAt?.seconds || 0));
       const withCounts = await Promise.all(
         list.map(async (book) => {
-          const c = await getCountFromServer(collection(db, "books", book.id, "comments"));
+          const c = await getCountFromServer(collection(db, "threads", book.id, "comments"));
           return { ...book, commentCount: c.data().count };
         })
       );

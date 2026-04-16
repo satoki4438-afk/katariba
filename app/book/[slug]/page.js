@@ -25,23 +25,20 @@ export default function BookPage() {
     if (!user || !slug) return;
     async function resolve() {
       const decodedSlug = decodeURIComponent(slug);
-      console.log("[book/resolve] slug:", slug, "decoded:", decodedSlug);
       let bookDoc;
-      const q = query(collection(db, "books"), where("slug", "==", decodedSlug), limit(1));
+      const q = query(collection(db, "threads"), where("slug", "==", decodedSlug), limit(1));
       const snap = await getDocs(q);
-      console.log("[book/resolve] slug query size:", snap.size);
       if (!snap.empty) {
         bookDoc = snap.docs[0];
       } else {
-        const direct = await getDoc(doc(db, "books", decodedSlug));
-        console.log("[book/resolve] direct lookup exists:", direct.exists());
+        const direct = await getDoc(doc(db, "threads", decodedSlug));
         if (!direct.exists()) { router.push("/home"); return; }
         bookDoc = direct;
       }
       const data = { id: bookDoc.id, ...bookDoc.data() };
       setBook(data);
       setBookId(bookDoc.id);
-      const cSnap = await getDocs(collection(db, "books", bookDoc.id, "comments"));
+      const cSnap = await getDocs(collection(db, "threads", bookDoc.id, "comments"));
       setCommentCount(cSnap.size);
       setLoading(false);
     }
@@ -50,10 +47,10 @@ export default function BookPage() {
 
   if (user === undefined || loading || !book) return null;
 
-  const statusLabel = book.status === "reading" ? "WEEK 1 · 読書中" :
-                      book.status === "open" ? "WEEK 2 · 討論中" : "CLOSED";
-  const statusColor = book.status === "reading" ? "var(--blue)" :
-                      book.status === "open" ? "var(--red)" : "var(--muted)";
+  const statusLabel = book.status === "week1" ? "WEEK 1 · 読書中" :
+                      book.status === "week2" ? "WEEK 2 · 討論中" : "CLOSED";
+  const statusColor = book.status === "week1" ? "var(--blue)" :
+                      book.status === "week2" ? "var(--red)" : "var(--muted)";
 
   return (
     <>
@@ -134,9 +131,9 @@ export default function BookPage() {
         </div>
 
         <div className="book-week-note">
-          {book.status === "reading" ? (
+          {book.status === "week1" ? (
             <><strong>Week 1（読書期間）</strong><br />自分の投稿は保存されますが、Week 2開始まで他の人には見えません。じっくり読みながら感想を残してください。</>
-          ) : book.status === "open" ? (
+          ) : book.status === "week2" ? (
             <><strong>Week 2（討論期間）</strong><br />全コメントが解放されました。他の人の感想を読んで、リプライやいいねでやり取りしてください。</>
           ) : (
             <><strong>クローズ</strong><br />この本の討論期間は終了しました。過去ログは閲覧できます。</>
@@ -144,7 +141,7 @@ export default function BookPage() {
         </div>
 
         <Link href={`/book/${slug}/chat`} className="btn-chat">
-          {book.status === "reading" ? "投稿する" : "討論スレを見る"}
+          {book.status === "week1" ? "投稿する" : "討論スレを見る"}
         </Link>
 
         {book.rakutenUrl && (

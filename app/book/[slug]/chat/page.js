@@ -44,12 +44,12 @@ export default function ChatPage() {
     async function resolve() {
       const decodedSlug = decodeURIComponent(slug);
       let bookDoc;
-      const q = query(collection(db, "books"), where("slug", "==", decodedSlug), limit(1));
+      const q = query(collection(db, "threads"), where("slug", "==", decodedSlug), limit(1));
       const snap = await getDocs(q);
       if (!snap.empty) {
         bookDoc = snap.docs[0];
       } else {
-        const direct = await getDoc(doc(db, "books", decodedSlug));
+        const direct = await getDoc(doc(db, "threads", decodedSlug));
         if (!direct.exists()) { router.push("/home"); return; }
         bookDoc = direct;
       }
@@ -76,7 +76,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!user || !bookId) return;
-    const q = query(collection(db, "books", bookId, "comments"), orderBy("createdAt", "asc"));
+    const q = query(collection(db, "threads", bookId, "comments"), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(q, (snap) => {
       const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       const visible = all.filter((c) => c.visible || c.userId === user.uid);
@@ -86,7 +86,7 @@ export default function ChatPage() {
   }, [user, bookId]);
 
   async function loadReplies(commentId) {
-    const q = query(collection(db, "books", bookId, "comments", commentId, "replies"), orderBy("createdAt", "asc"));
+    const q = query(collection(db, "threads", bookId, "comments", commentId, "replies"), orderBy("createdAt", "asc"));
     const snap = await getDocs(q);
     setReplies((prev) => ({ ...prev, [commentId]: snap.docs.map((d) => ({ id: d.id, ...d.data() })) }));
   }
@@ -103,7 +103,7 @@ export default function ChatPage() {
     if (!user || liked[comment.id]) return;
     if (comment.userId === user.uid) return;
     setLiked((prev) => ({ ...prev, [comment.id]: true }));
-    const ref = doc(db, "books", bookId, "comments", comment.id);
+    const ref = doc(db, "threads", bookId, "comments", comment.id);
     await updateDoc(ref, { likeCount: increment(1) });
     const likeRef = doc(db, "likes", user.uid, "targets", comment.userId);
     const snap = await getDoc(likeRef);
@@ -126,20 +126,20 @@ export default function ChatPage() {
     const isOpen = book?.status === "open";
 
     if (replyTo) {
-      await addDoc(collection(db, "books", bookId, "comments", replyTo.id, "replies"), {
+      await addDoc(collection(db, "threads", bookId, "comments", replyTo.id, "replies"), {
         userId: user.uid,
         anonymousId,
         text: text.trim(),
         anchorNum: replyTo.num,
         createdAt: serverTimestamp(),
       });
-      await updateDoc(doc(db, "books", bookId, "comments", replyTo.id), {
+      await updateDoc(doc(db, "threads", bookId, "comments", replyTo.id), {
         replyCount: increment(1),
       });
       loadReplies(replyTo.id);
       setExpanded((prev) => ({ ...prev, [replyTo.id]: true }));
     } else {
-      await addDoc(collection(db, "books", bookId, "comments"), {
+      await addDoc(collection(db, "threads", bookId, "comments"), {
         userId: user.uid,
         anonymousId,
         text: text.trim(),
@@ -269,17 +269,17 @@ export default function ChatPage() {
               </a>
             )}
             <span className={`chat-status ${
-              book.status === "reading" ? "status-reading" :
-              book.status === "open" ? "status-open" : "status-closed"
+              book.status === "week1" ? "status-reading" :
+              book.status === "week2" ? "status-open" : "status-closed"
             }`}>
-              {book.status === "reading" ? "WEEK 1" : book.status === "open" ? "WEEK 2" : "CLOSED"}
+              {book.status === "week1" ? "WEEK 1" : book.status === "week2" ? "WEEK 2" : "CLOSED"}
             </span>
             <Link href={`/book/${slug}`} className="back-link-chat">← 詳細</Link>
           </div>
         </div>
 
         <div className="chat-body">
-          {book.status === "reading" && (
+          {book.status === "week1" && (
             <div className="chat-week-notice">
               <strong>Week 1（読書期間）</strong>　あなたの投稿はWeek 2開始まで自分にしか見えません。
             </div>
@@ -364,7 +364,7 @@ export default function ChatPage() {
                 {posting ? "..." : "投稿"}
               </button>
             </div>
-            {book.status === "reading" && (
+            {book.status === "week1" && (
               <div className="week1-own-note">Week 1：投稿はWeek 2開始まで自分にしか見えません</div>
             )}
           </div>

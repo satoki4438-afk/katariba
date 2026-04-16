@@ -27,12 +27,12 @@ export default function HomePage() {
   useEffect(() => {
     if (!user) return;
     async function fetchBooks() {
-      const q = query(collection(db, "books"), orderBy("createdAt", "desc"));
+      const q = query(collection(db, "threads"), orderBy("created_at", "desc"));
       const snap = await getDocs(q);
       const booksData = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       const withCounts = await Promise.all(
         booksData.map(async (book) => {
-          const countSnap = await getCountFromServer(collection(db, "books", book.id, "comments"));
+          const countSnap = await getCountFromServer(collection(db, "threads", book.id, "comments"));
           return { ...book, commentCount: countSnap.data().count };
         })
       );
@@ -140,11 +140,11 @@ export default function HomePage() {
 
                 <div className="book-card-top">
                   <span className={`book-week-tag ${
-                    book.status === "reading" ? "tag-reading" :
-                    book.status === "open" ? "tag-open" : "tag-closed"
+                    book.status === "week1" ? "tag-reading" :
+                    book.status === "week2" ? "tag-open" : "tag-closed"
                   }`}>
-                    {book.status === "reading" ? "WEEK 1 · 読書中" :
-                     book.status === "open" ? "WEEK 2 · 討論中" : "CLOSED"}
+                    {book.status === "week1" ? "WEEK 1 · 読書中" :
+                     book.status === "week2" ? "WEEK 2 · 討論中" : "CLOSED"}
                   </span>
                   {book.genre && <span className="book-genre-tag">{book.genre}</span>}
                 </div>
@@ -158,10 +158,10 @@ export default function HomePage() {
                   <div className="book-card-info">
                     <div className="book-title">{book.title}</div>
                     <div className="book-author">{book.author}</div>
-                    {book.status === "reading" && (
+                    {book.status === "week1" && (
                       <div className="book-countdown">開館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
                     )}
-                    {book.status === "open" && (
+                    {book.status === "week2" && (
                       <div className="book-countdown">閉館まであと <span>{daysUntilNextSaturday()}</span> 日</div>
                     )}
                     <div className="book-footer">

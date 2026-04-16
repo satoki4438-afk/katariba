@@ -34,14 +34,14 @@ export default function RankingPage() {
     if (t === "like" && likeRanking) return;
     if (t === "ronkyaku" && ronkyakuRanking) return;
     setLoading(true);
-    const booksSnap = await getDocs(collection(db, "books"));
+    const booksSnap = await getDocs(collection(db, "threads"));
     const books = booksSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     if (t === "reply") {
       // 本ごとのコメント数をタイトルで合算
       const titleMap = {};
       await Promise.all(books.map(async (book) => {
-        const countSnap = await getCountFromServer(collection(db, "books", book.id, "comments"));
+        const countSnap = await getCountFromServer(collection(db, "threads", book.id, "comments"));
         const count = countSnap.data().count;
         if (!titleMap[book.title]) {
           titleMap[book.title] = { title: book.title, author: book.author || "", coverUrl: book.coverUrl || null, count: 0, appearances: 0 };
@@ -57,7 +57,7 @@ export default function RankingPage() {
       // 全コメントからいいね数上位を収集
       const allComments = [];
       await Promise.all(books.map(async (book) => {
-        const snap = await getDocs(query(collection(db, "books", book.id, "comments"), orderBy("likeCount", "desc")));
+        const snap = await getDocs(query(collection(db, "threads", book.id, "comments"), orderBy("likeCount", "desc")));
         snap.docs.forEach((d) => {
           const data = d.data();
           if ((data.likeCount || 0) > 0) {
@@ -80,7 +80,7 @@ export default function RankingPage() {
       // 全コメントのlikeCountをuserId別に合算
       const userMap = {};
       await Promise.all(books.map(async (book) => {
-        const snap = await getDocs(collection(db, "books", book.id, "comments"));
+        const snap = await getDocs(collection(db, "threads", book.id, "comments"));
         snap.docs.forEach((d) => {
           const data = d.data();
           const uid = data.userId;

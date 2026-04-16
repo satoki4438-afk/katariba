@@ -25,12 +25,12 @@ export default function ArchiveBookPage() {
     async function resolve() {
       const decodedSlug = decodeURIComponent(slug);
       let bookDoc;
-      const q = query(collection(db, "books"), where("slug", "==", decodedSlug), limit(1));
+      const q = query(collection(db, "threads"), where("slug", "==", decodedSlug), limit(1));
       const snap = await getDocs(q);
       if (!snap.empty) {
         bookDoc = snap.docs[0];
       } else {
-        const direct = await getDoc(doc(db, "books", decodedSlug));
+        const direct = await getDoc(doc(db, "threads", decodedSlug));
         if (!direct.exists()) { router.push("/archive"); return; }
         bookDoc = direct;
       }
@@ -40,7 +40,7 @@ export default function ArchiveBookPage() {
       setBook(bookData);
       setBookId(id);
 
-      const cq = query(collection(db, "books", id, "comments"), orderBy("createdAt", "asc"));
+      const cq = query(collection(db, "threads", id, "comments"), orderBy("createdAt", "asc"));
       const cSnap = await getDocs(cq);
       const all = cSnap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
@@ -53,7 +53,7 @@ export default function ArchiveBookPage() {
 
   async function loadReplies(commentId) {
     const q = query(
-      collection(db, "books", bookId, "comments", commentId, "replies"),
+      collection(db, "threads", bookId, "comments", commentId, "replies"),
       orderBy("createdAt", "asc")
     );
     const snap = await getDocs(q);

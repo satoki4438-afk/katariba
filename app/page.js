@@ -1,16 +1,28 @@
 "use client";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function TopPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+
   useEffect(() => {
+    if (user) router.replace("/home");
+  }, [user]);
+
+  useEffect(() => {
+    if (user !== null) return;
     const obs = new IntersectionObserver(
       (entries) => entries.forEach((x) => { if (x.isIntersecting) x.target.classList.add("visible"); }),
       { threshold: 0.1 }
     );
     document.querySelectorAll(".reveal").forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
+  }, [user]);
+
+  if (user === undefined || user) return null;
 
   return (
     <>

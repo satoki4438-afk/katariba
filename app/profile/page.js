@@ -185,7 +185,7 @@ export default function ProfilePage() {
       const bookIds = [...new Set(cSnap.docs.map((d) => d.ref.parent.parent.id))];
       const books = await Promise.all(
         bookIds.map(async (bid) => {
-          const bSnap = await getDoc(doc(db, "books", bid));
+          const bSnap = await getDoc(doc(db, "threads", bid));
           return bSnap.exists() ? { id: bid, ...bSnap.data() } : null;
         })
       );
